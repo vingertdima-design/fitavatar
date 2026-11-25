@@ -189,3 +189,6 @@ textarea.input{min-height:120px;font-family:ui-monospace,monospace;font-size:13p
 .pro-banner{display:flex;align-items:center;gap:12px;width:100%;border:0;background:linear-gradient(110deg,var(--arena),#3a2c2a);color:#fff;min-height:64px}
 .pro-banner .small{color:#d4d6de}
 .card .btn.ghost{background:var(--bg)}
+.card>.row>svg{width:28px;height:28px;flex:none;color:var(--accent)}
+.setdots{margin:4px 0 10px}
+.seg button.on{background:light-dark(#fff,#34363f)}
