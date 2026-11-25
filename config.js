@@ -7,6 +7,12 @@ window.FA_CONFIG = {
   instagramGate: true,
   bot: 'fitavatar_app_bot',             // username Telegram-бота без @
 
+  // Доступ только подписчикам Telegram-канала — ПРОВЕРЯЕТСЯ по-настоящему при каждом открытии:
+  // отписался — приложение закрывается экраном «Подпишитесь». Нужны: username канала,
+  // бот @fitavatar_app_bot в админах канала и запущенный сервер бота (pro.apiUrl ниже).
+  // Пока пусто — проверка выключена. Instagram так проверить нельзя: у него нет такой функции.
+  channel: '',                          // например 'vingert_dima' (без @)
+
   // Монетизация: FitAvatar PRO за Telegram Stars
   pro: {
     enabled: true,
