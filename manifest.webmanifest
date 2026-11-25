@@ -1,0 +1,16 @@
+{
+  "name": "FitAvatar — фитнес с персонажем",
+  "short_name": "FitAvatar",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#17191f",
+  "theme_color": "#17191f",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

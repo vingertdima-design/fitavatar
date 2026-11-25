@@ -1,0 +1,191 @@
+/*
+VOICE: энергичный тренер — коротко, бодро, без лишнего
+IDEA: персонаж стоит на «арене», как в файтинге: тёмная сцена, световое пятно, полосы характеристик
+PICTURE: SVG-персонаж на тёмной арене + анимированная фигура, показывающая технику
+COLOUR and TYPE: белый/графит, коралловый акцент #ff4d2e, тёмная арена #17191f; Unbounded для цифр и заголовков, Manrope для текста
+LAYOUT: мобильная колонка до 560px, нижнее меню из 5 вкладок, листы снизу для деталей
+*/
+:root{color-scheme:light dark;
+  --bg:light-dark(#ffffff,#0f1013);--surface:light-dark(#f1f1ef,#1a1b20);--surface2:light-dark(#e6e6e2,#25262d);
+  --ink:light-dark(#14161b,#f3f3f1);--muted:light-dark(#62656e,#9c9ea7);--line:light-dark(#d9d9d4,#33343c);
+  --accent:#ff4d2e;--accent-ink:#fff;--arena:#17191f;--arena2:#262832;--ok:#16a34a;--blue:#3b6cff;--gold:#f5b301;
+  --r:18px;--display:'Unbounded',system-ui,sans-serif;--body:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--body);overflow-x:clip;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+h1,h2,h3{font-family:var(--display);font-weight:600;line-height:1.08;margin:0;text-wrap:balance}
+h1{font-size:28px}h2{font-size:20px}h3{font-size:16px}
+.muted{color:var(--muted)}.small{font-size:13px}
+#app{max-width:560px;margin:0 auto;min-height:100%;padding:calc(env(safe-area-inset-top) + 14px) 16px calc(92px + env(safe-area-inset-bottom))}
+.screen{display:grid;gap:16px;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hello{font-size:14px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;background:var(--surface);font-weight:700;font-size:14px;white-space:nowrap}
+.pill svg{width:18px;height:18px}
+.card{background:var(--surface);border-radius:var(--r);padding:16px}
+.row{display:flex;align-items:center;gap:12px}.row.between{justify-content:space-between}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+
+/* Арена с персонажем */
+.arena{position:relative;border-radius:24px;background:radial-gradient(120% 80% at 30% 0%,#2c2f3b 0%,var(--arena) 60%);color:#f3f3f1;padding:16px;display:grid;grid-template-columns:minmax(0,46%) minmax(0,1fr);gap:12px;overflow:hidden;min-height:330px}
+.arena::after{content:"";position:absolute;left:-10%;right:50%;bottom:-40px;height:120px;background:radial-gradient(closest-side,rgba(255,77,46,.35),transparent);pointer-events:none}
+.arena .stage{position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:center}
+.avatar-svg{width:100%;height:auto;max-height:340px;display:block}
+.arena .info{position:relative;z-index:1;display:flex;flex-direction:column;gap:10px;justify-content:center}
+.arena .lvl{font-family:var(--display);font-size:44px;line-height:1;color:#fff}
+.arena .lvl small{display:block;font-family:var(--body);font-size:13px;color:#b8bac4;font-weight:600;margin-bottom:4px}
+.rank{display:inline-block;align-self:flex-start;background:var(--accent);color:#fff;font-weight:800;font-size:12px;padding:4px 10px;border-radius:99px}
+.bar{height:8px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden}
+.card .bar,.sheet .bar{background:var(--surface2)}
+.bar>i{display:block;height:100%;border-radius:9px;background:var(--accent);transition:width .5s ease}
+.stat{display:grid;gap:4px;font-size:13px}
+.stat .row{justify-content:space-between;color:#d4d6de}.stat b{color:#fff;font-weight:700}
+.stat.s1 .bar>i{background:#ff4d2e}.stat.s2 .bar>i{background:#3b9dff}.stat.s3 .bar>i{background:#b27dff}.stat.s4 .bar>i{background:var(--gold)}
+.form-score{font-size:13px;color:#b8bac4}.form-score b{font-family:var(--display);color:#fff;font-size:18px}
+
+/* Кольца дня */
+.rings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.ring{background:var(--surface);border-radius:var(--r);padding:12px 8px;display:grid;justify-items:center;gap:4px;text-align:center;border:0;width:100%}
+.ring svg{width:64px;height:64px}
+.ring b{font-family:var(--display);font-size:15px;font-weight:600;white-space:nowrap}
+.ring span{font-size:12px;color:var(--muted)}
+
+/* Чек-лист */
+.list{display:grid;gap:8px}
+.task{display:flex;align-items:center;gap:12px;background:var(--bg);border-radius:14px;padding:10px 12px;min-height:56px;border:1px solid var(--line)}
+.card .task{background:var(--bg)}
+.task .chk{flex:none;width:30px;height:30px;border-radius:10px;border:2px solid var(--line);display:grid;place-items:center;background:transparent;padding:0}
+.task.done .chk{background:var(--ok);border-color:var(--ok)}
+.task .chk svg{width:18px;height:18px;opacity:0;color:#fff}.task.done .chk svg{opacity:1}
+.task .txt{flex:1;min-width:0}.task .txt b{display:block;font-weight:700;font-size:15px;line-height:1.25}
+.task.done .txt b{text-decoration:line-through;text-decoration-color:var(--muted);color:var(--muted)}
+.task .txt span{font-size:13px;color:var(--muted)}
+.xp{flex:none;font-weight:800;font-size:12px;color:var(--accent);white-space:nowrap}
+.task .icon-btn{width:36px;height:36px}
+.section-title{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:4px 2px 0}
+
+/* Кнопки */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:12px 18px;border-radius:14px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:16px;width:100%;transition:transform .1s}
+.btn:active{transform:scale(.98)}.btn svg{width:20px;height:20px}
+.btn.ghost{background:var(--surface);color:var(--ink)}.btn.dark{background:var(--ink);color:var(--bg)}
+.btn.sm{min-height:44px;padding:8px 14px;font-size:14px;width:auto}
+.icon-btn{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;border:0;background:var(--surface);flex:none;padding:0}
+.icon-btn svg{width:22px;height:22px}
+.link{background:none;border:0;color:var(--accent);font-weight:700;padding:8px 0;min-height:44px}
+
+/* Чипы, сегменты */
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--bg);border-radius:99px;padding:8px 14px;min-height:40px;font-weight:700;font-size:14px;white-space:nowrap}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);background:var(--surface);border-radius:14px;padding:4px;gap:4px}
+.seg button{border:0;background:transparent;border-radius:10px;min-height:42px;font-weight:700;font-size:14px;padding:4px 6px}
+.seg button.on{background:var(--bg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.swatches{display:flex;flex-wrap:wrap;gap:10px}
+.sw{width:44px;height:44px;border-radius:50%;border:3px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15);padding:0}
+.sw.on{border-color:var(--accent)}
+
+/* Программы и упражнения */
+.prog{display:grid;gap:8px;text-align:left;border:0;background:var(--surface);border-radius:var(--r);padding:16px;width:100%}
+.prog.active{box-shadow:inset 0 0 0 2px var(--accent)}
+.tags{display:flex;flex-wrap:wrap;gap:6px}.tag{font-size:12px;font-weight:700;background:var(--surface2);border-radius:8px;padding:3px 8px;white-space:nowrap}
+.tag.a{background:var(--accent);color:#fff}
+.exrow{display:flex;align-items:center;gap:12px;border:0;background:var(--surface);border-radius:14px;padding:8px 12px 8px 8px;text-align:left;width:100%;min-height:64px}
+.exthumb{flex:none;width:64px;height:52px;border-radius:10px;background:var(--bg);display:grid;place-items:center;overflow:hidden}
+.exthumb svg{width:100%;height:100%}
+.exanim{width:100%;height:100%;display:block}
+.search{width:100%;min-height:48px;border-radius:14px;border:1px solid var(--line);background:var(--bg);padding:10px 14px;font-size:16px}
+
+/* Нижнее меню */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+.nav .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
+.nav button{border:0;background:none;display:grid;justify-items:center;gap:2px;padding:6px 0;min-height:52px;font-size:11px;font-weight:700;color:var(--muted)}
+.nav button svg{width:24px;height:24px}.nav button.on{color:var(--accent)}
+
+/* Листы и модальные окна */
+.overlay{position:fixed;inset:0;z-index:40;background:rgba(10,10,14,.5);display:flex;align-items:flex-end;justify-content:center;animation:fadein .2s}
+@keyframes fadein{from{opacity:0}}
+.sheet{width:100%;max-width:560px;max-height:92vh;overflow:auto;background:var(--bg);border-radius:24px 24px 0 0;padding:10px 18px calc(22px + env(safe-area-inset-bottom));animation:up .28s cubic-bezier(.2,.9,.3,1);display:grid;gap:14px;align-content:start}
+@keyframes up{from{transform:translateY(40px);opacity:.4}}
+.grab{width:42px;height:5px;border-radius:5px;background:var(--line);margin:0 auto 4px}
+.sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.full{position:fixed;inset:0;z-index:50;background:var(--bg);overflow:auto;padding:calc(env(safe-area-inset-top) + 12px) 16px calc(24px + env(safe-area-inset-bottom));animation:fadein .2s}
+.full .wrap{max-width:560px;margin:0 auto;display:grid;gap:16px}
+.demo{position:relative;background:var(--surface);border-radius:var(--r);width:100%;height:0;padding-bottom:min(80%,300px);overflow:hidden}
+.demo>svg{position:absolute;inset:0;width:100%;height:100%}
+ol.steps{margin:0;padding-left:22px;display:grid;gap:6px}
+ul.clean{margin:0;padding-left:20px;display:grid;gap:4px}
+
+/* Конструктор */
+.creator-preview{background:radial-gradient(100% 70% at 50% 0%,#2c2f3b,var(--arena));border-radius:24px;height:min(42vh,320px);display:flex;justify-content:center;align-items:flex-end;padding-top:10px}
+.creator-preview .avatar-svg{height:100%;width:auto}
+.field{display:grid;gap:8px}.field>label,.field>.lab{font-weight:700;font-size:14px}
+.range{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
+.range output{font-family:var(--display);font-size:16px;min-width:76px;text-align:right;white-space:nowrap}
+input[type=range]{width:100%;accent-color:var(--accent);height:32px}
+.input{width:100%;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:10px 12px;font-size:16px}
+.goal{display:grid;gap:8px}
+.goal button{display:grid;gap:2px;text-align:left;border:2px solid var(--line);background:var(--bg);border-radius:14px;padding:12px 14px;min-height:56px}
+.goal button.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--bg))}
+.goal button b{font-size:15px}.goal button span{font-size:13px;color:var(--muted)}
+.dots{display:flex;gap:6px;justify-content:center}.dots i{width:8px;height:8px;border-radius:9px;background:var(--line)}.dots i.on{width:22px;background:var(--accent)}
+
+/* Тренировка */
+.session-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.big{font-family:var(--display);font-size:clamp(48px,16vw,76px);line-height:1;text-align:center;font-weight:600;white-space:nowrap}
+.setdots{display:flex;gap:6px;justify-content:center}.setdots i{width:28px;height:6px;border-radius:6px;background:var(--surface2)}.setdots i.on{background:var(--accent)}
+
+/* Питание */
+.macro{display:grid;gap:6px}.macro .row{justify-content:space-between;font-size:14px}
+.macro.p .bar>i{background:#ff4d2e}.macro.f .bar>i{background:var(--gold)}.macro.c .bar>i{background:var(--blue)}
+.kcal-big{font-family:var(--display);font-size:40px;line-height:1;white-space:nowrap}
+.water{display:flex;flex-wrap:wrap;gap:8px}
+.glass{width:40px;height:48px;border-radius:8px 8px 12px 12px;border:2px solid var(--blue);background:transparent;padding:0;position:relative;overflow:hidden}
+.glass.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:75%;background:var(--blue);opacity:.8}
+.meal{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.meal:last-child{border-bottom:0}.meal b{font-size:14px}.meal span{font-size:13px;color:var(--muted)}.meal em{font-style:normal;font-weight:700;font-size:14px;white-space:nowrap;grid-row:span 2;align-self:center}
+.food-item{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;border:0;background:var(--surface);border-radius:12px;padding:10px 12px;min-height:52px;text-align:left}
+
+/* Прогресс */
+.fig{position:relative;height:200px}.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.heat{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.heat i{aspect-ratio:1.5;border-radius:6px;background:var(--surface2)}
+.heat i.l1{background:color-mix(in srgb,var(--accent) 35%,var(--surface2))}.heat i.l2{background:color-mix(in srgb,var(--accent) 65%,var(--surface2))}.heat i.l3{background:var(--accent)}
+.heat i.today{box-shadow:0 0 0 2px var(--ink)}
+.ach{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.badge{display:grid;justify-items:center;gap:6px;text-align:center;background:var(--surface);border-radius:16px;padding:12px 6px;font-size:12px;font-weight:700;line-height:1.2}
+.badge .ic{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--surface2);color:var(--muted)}
+.badge .ic svg{width:24px;height:24px}
+.badge.got .ic{background:var(--gold);color:#3a2a00}
+.badge:not(.got){opacity:.55}
+.kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.kv div{background:var(--surface);border-radius:14px;padding:12px}.kv b{display:block;font-family:var(--display);font-size:20px;white-space:nowrap}.kv span{font-size:12px;color:var(--muted)}
+
+/* Тост и повышение уровня */
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:700;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.25);animation:up .25s;max-width:90vw;text-align:center}
+.levelup{background:radial-gradient(90% 70% at 50% 20%,#3a2c2a,var(--arena));color:#fff;border-radius:28px;padding:20px;width:min(92vw,400px);display:grid;gap:12px;justify-items:center;text-align:center;position:relative;overflow:hidden;margin:auto;animation:pop .4s cubic-bezier(.2,1.4,.4,1)}
+@keyframes pop{from{transform:scale(.8);opacity:0}}
+.levelup .avatar-svg{height:230px;width:auto}
+.overlay.center{align-items:center;padding:16px}
+.confetti{position:absolute;inset:0;pointer-events:none}
+.confetti i{position:absolute;top:-10px;width:8px;height:14px;border-radius:2px;animation:fall 2.2s linear forwards}
+@keyframes fall{to{transform:translateY(560px) rotate(540deg);opacity:0}}
+.dialog{background:var(--bg);border-radius:20px;padding:20px;width:min(92vw,380px);display:grid;gap:14px;margin:auto}
+textarea.input{min-height:120px;font-family:ui-monospace,monospace;font-size:13px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media(max-width:360px){.arena{grid-template-columns:minmax(0,1fr)}.arena .stage{height:260px}.rings b{font-size:13px}}
+
+/* Instagram и PRO */
+.ig-ic{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#fff;background:linear-gradient(45deg,#f58529,#dd2a7b 50%,#8134af)}
+.ig-ic svg{width:24px;height:24px}
+.pro-ic{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--gold);color:#3a2a00}
+.pro-ic svg{width:22px;height:22px}
+.tag.pro{background:var(--gold);color:#3a2a00;font-family:var(--body)}
+.pro-banner{display:flex;align-items:center;gap:12px;width:100%;border:0;background:linear-gradient(110deg,var(--arena),#3a2c2a);color:#fff;min-height:64px}
+.pro-banner .small{color:#d4d6de}
+.card .btn.ghost{background:var(--bg)}
