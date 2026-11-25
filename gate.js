@@ -21,14 +21,14 @@
     if (!box) {
       box = document.createElement('div');
       box.setAttribute('role', 'dialog');
-      box.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px 24px;text-align:center;background:#17191f;color:#f4f4f6;font-family:Manrope,system-ui,sans-serif';
+      box.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px 24px;text-align:center;background:#17191f;color:#f4f4f6;font-family:Rubik,system-ui,sans-serif';
       box.innerHTML =
         '<div style="width:84px;height:84px;border-radius:26px;background:linear-gradient(135deg,#ff5a36,#ff2d6f);display:flex;align-items:center;justify-content:center;font-size:40px">🔒</div>' +
-        '<div style="font:600 22px/1.25 Unbounded,Manrope,sans-serif">FitAvatar — для подписчиков</div>' +
+        '<div style="font:600 26px/1.2 Oswald,Rubik,sans-serif">FitAvatar — для подписчиков</div>' +
         '<div style="font-size:15px;line-height:1.5;opacity:.75;max-width:320px">Подпишитесь на канал <b>@' + channel + '</b>, чтобы тренироваться и прокачивать персонажа. Ваш прогресс сохранён и вернётся сразу после подписки.</div>' +
         '<div data-msg style="font-size:13px;color:#ff8a70;min-height:18px"></div>' +
-        '<button data-sub style="width:100%;max-width:320px;padding:16px;border:0;border-radius:16px;background:#ff5a36;color:#fff;font:700 16px Manrope,sans-serif">Подписаться на канал</button>' +
-        '<button data-check style="width:100%;max-width:320px;padding:14px;border:0;border-radius:16px;background:#262830;color:#f4f4f6;font:700 15px Manrope,sans-serif">Я подписался — проверить</button>';
+        '<button data-sub style="width:100%;max-width:320px;padding:16px;border:0;border-radius:16px;background:#ff5a36;color:#fff;font:700 16px Rubik,sans-serif">Подписаться на канал</button>' +
+        '<button data-check style="width:100%;max-width:320px;padding:14px;border:0;border-radius:16px;background:#262830;color:#f4f4f6;font:700 15px Rubik,sans-serif">Я подписался — проверить</button>';
       box.querySelector('[data-sub]').onclick = function () {
         var url = 'https://t.me/' + channel;
         if (TG.openTelegramLink) TG.openTelegramLink(url); else window.open(url, '_blank');
