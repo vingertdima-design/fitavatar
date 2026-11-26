@@ -297,7 +297,7 @@ function weekWorkouts() { const n = new Date(), mon = new Date(n); mon.setDate(n
 function coachMsgs(plan, wDone, t, e) {
   const c = S.char, out = [], idle = idleDays(), wk = weekWorkouts(), need = c.days || 3, h = new Date().getHours();
   if (idle >= 3) out.push(`Ты не тренировался ${idle} ${plural(idle,'день','дня','дней')}. Ничего страшного — сегодня сделай тренировку на 70%: те же упражнения, веса чуть меньше. Главное — вернуться в ритм.`);
-  if (!wDone && wk < need) out.push(`Сегодня по плану: «${plan.pd.name}» — ${plan.items.length} упражнений, примерно ${Math.round(plan.items.reduce((s, x) => s + x.it.sets * ((x.it.time || x.it.reps * 3) + COACH.rest(x.ex, c.goal)), 0) / 60) + 7} минут. Я проведу тебя по каждому подходу и подскажу вес.`);
+  if (!wDone && wk < need) out.push(`Сегодня по плану: «${plan.pd.name}» — ${plan.items.length} упражнений, примерно ${Math.round(plan.items.reduce((s, x) => s + x.it.sets * ((x.it.time || x.it.reps * 3) + COACH.rest(x.ex, c.goal)), 0) / 60) + 7} мин. Я проведу тебя по каждому подходу и подскажу вес.`);
   else if (!wDone && wk >= need) out.push(`На этой неделе уже ${wk} из ${need} тренировок — сегодня день восстановления. Прогулка 8–10 тысяч шагов и сон 7–9 часов дадут мышцам вырасти.`);
   else out.push('Тренировка сделана — отлично! Теперь важно восстановление: белок в ближайшие 2 часа, вода и сон.');
   if (tier() >= 1) {
