@@ -402,7 +402,7 @@ window.ExAnim = (() => {
   function mix(p, q, k) {
     const o = {};
     for (const key of new Set([...Object.keys(p), ...Object.keys(q)])) {
-      const a = p[key] ?? (Array.isArray(q[key]) ? [0,0] : 0), b = q[key] ?? (Array.isArray(a) ? [0,0] : 0);
+      const dv = key === 'al' ? 1 : 0; const a = p[key] ?? (Array.isArray(q[key]) ? [0,0] : dv), b = q[key] ?? (Array.isArray(a) ? [0,0] : dv);
       o[key] = Array.isArray(a) ? [lerp(a[0], b[0], k), lerp(a[1], b[1], k)] : lerp(a, b, k);
     }
     return o;
@@ -411,11 +411,11 @@ window.ExAnim = (() => {
 
   function solve(p, anim) {
     const hip = { x:0, y:0 };
-    const sh = { x:Math.sin(R(p.t)) * L.torso, y:-Math.cos(R(p.t)) * L.torso };
+    const sh = { x:Math.sin(R(p.t)) * L.torso, y:-Math.cos(R(p.t)) * L.torso - (p.sp || 0) };
     const na = p.t + (p.nk || 0);
     const head = { x:sh.x + Math.sin(R(na)) * (L.neck + L.head), y:sh.y - Math.cos(R(na)) * (L.neck + L.head) };
     const limb = (o, a1, a2, l1, l2) => { const m = vd(a1, l1); const j = { x:o.x + m.x, y:o.y + m.y }; const n = vd(a2, l2); return [j, { x:j.x + n.x, y:j.y + n.y }]; };
-    const arms = [0,1].map(i => limb(sh, p.ua[i], p.fa[i], L.ua, L.fa));
+    const al = p.al ?? 1; const arms = [0,1].map(i => limb(sh, p.ua[i], p.fa[i], L.ua * al, L.fa * al));
     const legs = [0,1].map(i => limb(hip, p.th[i], p.sh[i], L.th, L.sh));
     const ref = anim.lock === 'hand' ? arms[0][1] : anim.lock === 'hip' ? hip : legs[0][1];
     const dx = anim.at[0] - ref.x, dy = anim.at[1] - ref.y + (p.dy || 0);
@@ -438,11 +438,16 @@ window.ExAnim = (() => {
     const h = s.arms[0][1];
     if (anim.prop === 'db') prop = `<rect x="${f1(h.x - 9)}" y="${f1(h.y - 3)}" width="18" height="6" rx="2" fill="var(--ink)"/><rect x="${f1(h.x - 11)}" y="${f1(h.y - 6)}" width="5" height="12" rx="1.5" fill="var(--ink)"/><rect x="${f1(h.x + 6)}" y="${f1(h.y - 6)}" width="5" height="12" rx="1.5" fill="var(--ink)"/>`;
     if (anim.prop === 'barbell') prop = `<circle cx="${f1(h.x)}" cy="${f1(h.y)}" r="11" fill="none" stroke="var(--ink)" stroke-width="5"/><circle cx="${f1(h.x)}" cy="${f1(h.y)}" r="2.5" fill="var(--ink)"/>`;
+    if (anim.prop === 'bb') prop = `<circle cx="${f1(h.x)}" cy="${f1(h.y)}" r="11" fill="none" stroke="var(--ink)" stroke-width="5"/><circle cx="${f1(h.x)}" cy="${f1(h.y)}" r="2.5" fill="var(--ink)"/>`;
+    if (anim.prop === 'hipbar') prop = `<circle cx="${f1(s.hip.x)}" cy="${f1(s.hip.y - 9)}" r="12" fill="none" stroke="var(--ink)" stroke-width="5"/>`;
     if (anim.prop === 'rope') { const g = 150, top = h.y; prop = `<ellipse cx="${f1(s.hip.x + 4)}" cy="${f1((top + g + 8) / 2)}" rx="30" ry="${f1((g + 8 - top) / 2)}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 3"/>`; }
     const env = anim.prop === 'bar' ? `<path d="M50 20 H150" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/><path d="M52 20 V150 M148 20 V150" stroke="var(--line)" stroke-width="3"/>`
       : anim.prop === 'bench' ? `<rect x="22" y="104" width="52" height="7" rx="3" fill="var(--ink)"/><path d="M28 111 V150 M68 111 V150" stroke="var(--ink)" stroke-width="4"/>`
       : anim.prop === 'barbell' ? `<rect x="30" y="106" width="110" height="7" rx="3" fill="var(--ink)" opacity=".85"/><path d="M40 113 V150 M130 113 V150" stroke="var(--ink)" stroke-width="4" opacity=".85"/>` : '';
-    return `<path d="M8 152 H192" stroke="var(--line)" stroke-width="3" stroke-linecap="round"/>${env}${limbs(1, .38)}${torso}<circle cx="${f1(s.head.x)}" cy="${f1(s.head.y)}" r="${L.head}" fill="${col}"/>${limbs(0, 1)}${prop}`;
+    let dyn = '';
+    if (anim.pul) { const hh = s.arms[0][1]; dyn += `<path d="M${anim.pul[0]} ${anim.pul[1]} L${f1(hh.x)} ${f1(hh.y)}" stroke="var(--ink)" stroke-width="2" opacity=".7"/><circle cx="${anim.pul[0]}" cy="${anim.pul[1]}" r="5" fill="var(--ink)" opacity=".85"/>`; }
+    if (anim.envf) dyn += anim.envf(s);
+    return `<path d="M8 152 H192" stroke="var(--line)" stroke-width="3" stroke-linecap="round"/>${env}${dyn}${limbs(1, .38)}${torso}<circle cx="${f1(s.head.x)}" cy="${f1(s.head.y)}" r="${L.head}" fill="${col}"/>${limbs(0, 1)}${prop}`;
   }
 
   // Запуск анимации в контейнере; возвращает функцию остановки
@@ -472,7 +477,7 @@ window.ExAnim = (() => {
   // статичный кадр (для превью и проверки поз)
   function still(key, i = 0, color = 'var(--accent)') { const a = A[key]; return `<svg viewBox="0 0 200 160" class="exanim">${draw(solve(a.f[i % a.f.length], a), a, color)}</svg>`; }
 
-  return { mount, still, keys:Object.keys(A) };
+  return { mount, still, keys:Object.keys(A), add:(k, d) => { A[k] = d; }, P, A };
 })();
 
 /* FitAvatar — слой платформы: Telegram Mini App, нативное приложение (Capacitor), браузер.

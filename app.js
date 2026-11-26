@@ -56,7 +56,8 @@ const curWeight = () => (S.weights.length ? S.weights[S.weights.length - 1].w : 
 const CFG = window.FA_CONFIG || {}, PRO = CFG.pro || {};
 const isPro = () => !!(S.pro && (S.pro.full || S.pro.until > Date.now()));
 // Уровни доступа: 0 — бесплатно, 1 — подписчик Instagram, 2 — полный пакет за звёзды
-const tier = () => isPro() ? 2 : (S.igOk ? 1 : 0);
+const isOwner = () => { const u = PF.tgUser(); return !!(u && (CFG.ownerIds || []).map(String).includes(String(u.id))); };
+const tier = () => (isOwner() || isPro()) ? 2 : (S.igOk ? 1 : 0);
 const TIER_NAME = ['Бесплатный доступ', 'Подписчик', 'Полный пакет'];
 const progTier = (id) => (D.progById[id]?.tier ?? 0);
 const isLocked = (progId) => PRO.enabled !== false && progTier(progId) > tier();
@@ -306,8 +307,8 @@ function taskRow(id, title, sub, xp, done, exId, auto = false, custom = false) {
 let wSeg = 'programs', wFilter = 'all', exFilter = 'все', exQuery = '', mGoal = null;
 function vWorkouts() {
   const filters = [['all','Все'],['home','Дома'],['gym','Зал'],['lose','Похудение'],['cut','Сушка'],['gain','Масса'],['bulk','Для худых'],['fit','Форма']];
-  const progs = D.PROGRAMS.filter(p => wFilter === 'all' || p.place === wFilter || p.goal === wFilter);
-  const groups = ['все', ...new Set(D.EX.flatMap(x => x.muscles))];
+  const progs = D.PROGRAMS.filter(p => !p.mine && (wFilter === 'all' || p.place === wFilter || p.goal === wFilter));
+  const present = new Set(D.EX.flatMap(x => x.muscles)); const groups = ['все', ...(D.MUSCLE_ORDER || []).filter(g => present.has(g)), ...[...present].filter(g => !(D.MUSCLE_ORDER || []).includes(g))];
   const q = exQuery.trim().toLowerCase();
   const exs = D.EX.filter(x => (exFilter === 'все' || x.muscles.includes(exFilter)) && (!q || x.name.toLowerCase().includes(q)));
   const goalName = { lose:'Похудение', cut:'Сушка', gain:'Масса', bulk:'Для худых', fit:'Форма' };
@@ -315,6 +316,7 @@ function vWorkouts() {
   <h1>Тренировки</h1>
   <div class="seg" role="tablist"><button class="${wSeg === 'programs' ? 'on' : ''}" data-act="wseg" data-v="programs">Программы</button><button class="${wSeg === 'lib' ? 'on' : ''}" data-act="wseg" data-v="lib">Упражнения</button><button class="${wSeg === 'guide' ? 'on' : ''}" data-act="wseg" data-v="guide">Гид</button></div>
   ${wSeg === 'guide' ? guideList('train') : wSeg === 'programs' ? `
+  ${myPlanCard()}
   <div class="chips">${filters.map(([k, n]) => `<button class="chip ${wFilter === k ? 'on' : ''}" data-act="wfilter" data-v="${k}">${n}</button>`).join('')}</div>
   <div class="list">${progs.map(p => `<button class="prog ${S.program.id === p.id ? 'active' : ''}" data-act="prog" data-id="${p.id}">
       <div class="row between"><h3>${esc(p.name)}</h3>${S.program.id === p.id ? '<span class="tag a">Активна</span>' : isLocked(p.id) ? lockTag(progTier(p.id)) : IC.chev.replace('<svg', '<svg width="20" height="20"')}</div>
@@ -327,6 +329,17 @@ function vWorkouts() {
 </section>`;
 }
 const typeName = { str:'Сила', cardio:'Кардио', flex:'Растяжка' };
+function myPlanCard() {
+  const c = S.char, p = D.progById.my, n = c.days || 3, on = S.program.id === 'my';
+  return `<div class="card myplan" style="display:grid;gap:12px;${on ? 'box-shadow:inset 0 0 0 2px var(--accent)' : ''}">
+    <div class="row between"><div><div class="muted small">Подбор под вас</div><h3>Сколько тренировок в неделю?</h3></div>${on ? '<span class="tag a">Активен</span>' : ''}</div>
+    <div class="seg days">${[2,3,4,5,6].map(d => `<button class="${n === d ? 'on' : ''}" data-act="plan-days" data-v="${d}">${d}</button>`).join('')}</div>
+    <div class="seg"><button class="${c.place !== 'gym' ? 'on' : ''}" data-act="plan-place" data-v="home">Дома</button><button class="${c.place === 'gym' ? 'on' : ''}" data-act="plan-place" data-v="gym">В зале</button></div>
+    <div class="muted small">${esc(p.desc)}</div>
+    <div class="list" style="gap:6px">${p.days.map((d, i) => `<div class="row between small"><span><b>День ${i + 1}.</b> ${esc(d.name)}</span><span class="muted">${d.items.length} упр.</span></div>`).join('')}</div>
+    <div class="row" style="gap:8px"><button class="btn sm ghost" data-act="prog" data-id="my">Упражнения плана</button>${on ? '' : `<button class="btn sm" data-act="plan-use">Тренироваться по плану</button>`}</div>
+  </div>`;
+}
 const exRow = (x) => `<button class="exrow" data-act="ex" data-id="${x.id}"><span class="exthumb" data-anim="${x.anim}"></span><span style="flex:1;min-width:0"><b>${esc(x.name)}</b><br><span class="muted small">${typeName[x.type]} · ${esc(x.muscles.join(', '))}</span></span>${IC.chev.replace('<svg', '<svg width="20" height="20"')}</button>`;
 
 function openProgram(id) {
@@ -683,7 +696,7 @@ let draft = null, cStep = 0;
 const C_STEPS = ['Кто вы', 'Лицо', 'Волосы', 'Тело', 'Цель'];
 function openCreator(isNew) {
   const u = PF.tgUser();
-  draft = Object.assign({ name:u?.first_name || '', gender:'m', age:25, height:175, weight:75, skin:2, head:'oval', hair:'short', hairColor:1, eyes:0, beard:'none', glasses:false, body:'average', outfit:0, goal:'fit', activity:1.375, place:'home', target:'' }, S.char || {});
+  draft = Object.assign({ name:u?.first_name || '', gender:'m', age:25, height:175, weight:75, skin:2, head:'oval', hair:'short', hairColor:1, eyes:0, beard:'none', glasses:false, body:'average', outfit:0, goal:'fit', activity:1.375, place:'home', days:3, target:'' }, S.char || {});
   if (S.char) draft.weight = curWeight();
   cStep = 0;
   openSheet(`<div id="creator"></div>`, { full:true, onClose: () => { if (!S.char) setTimeout(() => openCreator(true), 0); } });
@@ -712,6 +725,7 @@ function drawCreator(isNew) {
     () => `<div class="field"><span class="lab">Главная цель</span><div class="goal">
         ${D.GOAL_ORDER.map(k => [k, D.GOALS[k].name, D.GOALS[k].short]).map(([k, n, s]) => `<button class="${draft.goal === k ? 'on' : ''}" data-c="goal" data-v="${k}"><b>${n}</b><span>${s}</span></button>`).join('')}</div></div>
       <div class="field"><span class="lab">Где тренируетесь</span><div class="seg"><button class="${draft.place === 'home' ? 'on' : ''}" data-c="place" data-v="home">Дома</button><button class="${draft.place === 'gym' ? 'on' : ''}" data-c="place" data-v="gym">В зале</button></div></div>
+      <div class="field"><span class="lab">Сколько тренировок в неделю готовы делать</span><div class="seg">${[2,3,4,5,6].map(d => `<button class="${(draft.days || 3) === d ? 'on' : ''}" data-c="days" data-v="${d}" data-num="1">${d}</button>`).join('')}</div><div class="muted small">Под это число подберём план: всё тело, верх/низ или тяни-толкай-ноги.</div></div>
       <div class="field"><label for="cact">Активность в течение дня</label><select class="input" id="cact">${[[1.2,'Сидячая работа, мало движения'],[1.375,'Лёгкая: 1–3 тренировки в неделю'],[1.55,'Средняя: 3–5 тренировок'],[1.725,'Высокая: 6–7 тренировок']].map(([v, n]) => `<option value="${v}" ${+draft.activity === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
       <div class="field"><label for="ctarget">Желаемый вес, кг (необязательно)</label><input class="input" id="ctarget" type="number" inputmode="decimal" min="35" max="200" value="${esc(draft.target)}"></div>`,
   ];
@@ -733,15 +747,13 @@ function finishCreator() {
   const c = Object.assign({}, draft);
   if (isNew) {
     S.weights = [{ d:today(), w:c.weight }];
-    const gym = c.place === 'gym';
-    const pick = { lose:'burn', cut: gym ? 'cut4' : 'burn', gain: gym ? 'ul4' : 'homeforce', bulk: gym ? 'skinny' : 'homeforce', fit:'start' }[c.goal] || 'start';
-    S.program = { id: isLocked(pick) ? 'start' : pick, next:0 };
+    S.program = { id:'my', next:0 };
   } else if (Math.abs(c.weight - curWeight()) >= 0.1) {
     S.weights = S.weights.filter(x => x.d !== today()); S.weights.push({ d:today(), w:c.weight });
   }
-  S.char = c; save();
+  S.char = c; save(); syncPlan();
   closeAll(); render();
-  if (isNew) toast(`Персонаж создан! Программа: ${D.progById[S.program.id].name}`);
+  if (isNew) toast(`Персонаж создан! ${D.progById[S.program.id].name}`);
 }
 
 /* ---------- Повышение уровня ---------- */
@@ -778,10 +790,12 @@ function openImport() {
 }
 
 /* ======================= РЕНДЕР И СОБЫТИЯ ======================= */
+function syncPlan() { const c = S.char; if (!c) return; const k = [c.days || 3, c.place, c.goal].join(); if (syncPlan.k !== k) { D.setMyPlan(c.days || 3, c.place, c.goal); syncPlan.k = k; } }
 const TABS = [['home','Главная','home'],['workouts','Тренировки','dumbbell'],['food','Питание','apple'],['progress','Прогресс','chart'],['profile','Профиль','user']];
 function render() {
   const app = $('#app'), nav = $('#nav');
   if (gateOn()) { nav.hidden = true; app.innerHTML = vGate(); return; }
+  syncPlan();
   if (!S.char) { app.innerHTML = ''; nav.hidden = true; if (!$('#creator')) openCreator(true); return; }
   nav.hidden = false;
   nav.innerHTML = `<div class="in">${TABS.map(([k, n, ic]) => `<button class="${S.tab === k ? 'on' : ''}" data-act="tab" data-tab="${k}" aria-current="${S.tab === k ? 'page' : 'false'}">${IC[ic]}${n}</button>`).join('')}</div>`;
@@ -811,6 +825,9 @@ const acts = {
   'task-del': (b) => confirmBox('Удалить пункт?', 'Удалить', () => { S.tasks = S.tasks.filter(t => t.id !== b.dataset.id); save(); render(); }),
   wseg: (b) => { wSeg = b.dataset.v; render(); },
   wfilter: (b) => { wFilter = b.dataset.v; render(); },
+  'plan-days': (b) => { S.char.days = +b.dataset.v; S.program = { id:'my', next:0 }; save(); render(); toast(`План: ${b.dataset.v} ${+b.dataset.v < 5 ? 'тренировки' : 'тренировок'} в неделю`); },
+  'plan-place': (b) => { S.char.place = b.dataset.v; if (S.program.id === 'my') S.program.next = 0; save(); render(); toast(b.dataset.v === 'gym' ? 'План для зала' : 'План для дома'); },
+  'plan-use': () => { S.program = { id:'my', next:0 }; save(); render(); toast('Тренируетесь по своему плану'); },
   exfilter: (b) => { exFilter = b.dataset.v; render(); },
   prog: (b) => openProgram(b.dataset.id),
   'prog-pick': (b) => { if (isLocked(b.dataset.id)) return openPro(); S.program = { id:b.dataset.id, next:0 }; save(); closeAll(); render(); toast('Программа выбрана'); },
@@ -848,7 +865,7 @@ const acts = {
   guide: (b) => openGuide(b.dataset.id),
   mgoal: (b) => { mGoal = b.dataset.v; planDay = 0; render(); },
   'goal-pick': () => openGoalPick(),
-  'goal-set': (b) => { S.char.goal = b.dataset.v; mGoal = null; save(); closeAll(); render(); toast('Цель: ' + D.GOALS[b.dataset.v].name); },
+  'goal-set': (b) => { S.char.goal = b.dataset.v; if (S.program.id === 'my') S.program.next = 0; mGoal = null; save(); closeAll(); render(); toast('Цель: ' + D.GOALS[b.dataset.v].name); },
   'buy-pro': () => buyPro(),
   's-set': () => finishSet(),
   's-timer': () => { sess.left = sess.plan.items[sess.i].it.time; PF.haptic('medium'); renderSession(); },
