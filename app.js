@@ -386,7 +386,7 @@ function myPlanCard() {
   return `<div class="card myplan" style="display:grid;gap:12px;${on ? 'box-shadow:inset 0 0 0 2px var(--accent)' : ''}">
     <div class="row between"><div><div class="muted small">Подбор под вас</div><h3>Сколько тренировок в неделю?</h3></div>${on ? '<span class="tag a">Активен</span>' : ''}</div>
     <div class="seg days">${[2,3,4,5,6].map(d => `<button class="${n === d ? 'on' : ''}" data-act="plan-days" data-v="${d}">${d}</button>`).join('')}</div>
-    <div class="seg"><button class="${c.place !== 'gym' ? 'on' : ''}" data-act="plan-place" data-v="home">Дома</button><button class="${c.place === 'gym' ? 'on' : ''}" data-act="plan-place" data-v="gym">В зале</button></div>
+    <div class="seg"><button class="${c.place === 'home' ? 'on' : ''}" data-act="plan-place" data-v="home">Дома</button><button class="${c.place !== 'home' ? 'on' : ''}" data-act="plan-place" data-v="gym">В зале</button></div>
     <div class="muted small">${esc(p.desc)}</div>
     <div class="list" style="gap:6px">${p.days.map((d, i) => `<div class="row between small"><span><b>День ${i + 1}.</b> ${esc(d.name)}</span><span class="muted">${d.items.length} упр.</span></div>`).join('')}</div>
     <div class="row" style="gap:8px"><button class="btn sm ghost" data-act="prog" data-id="my">Упражнения плана</button>${on ? '' : `<button class="btn sm" data-act="plan-use">Тренироваться по плану</button>`}</div>
@@ -796,6 +796,8 @@ function vProfile() {
     <div class="card" style="display:grid;gap:12px"><div class="row">${IC.bell}<div style="flex:1"><h3>Тренировка и напоминания</h3><div class="muted small">${PF.Reminders.available ? 'Ежедневное уведомление на телефоне' : PF.inTG ? 'Напоминания присылает бот: команда /remind 19:00' : 'Уведомления доступны в мобильном приложении'}</div></div></div>
       <div class="field"><span class="lab">Отдых между подходами</span><div class="range"><input type="range" min="15" max="180" step="5" value="${S.settings.rest}" data-set="rest" aria-label="Отдых"><output>${S.settings.rest} сек</output></div></div>
       ${PF.Reminders.available ? `<div class="row"><input class="input" type="time" value="${esc(S.settings.remindAt)}" id="rt" aria-label="Время напоминания" style="flex:1"><button class="btn sm" data-act="remind">${S.settings.remind ? 'Выключить' : 'Включить'}</button></div>` : ''}</div>
+    <div class="card" style="display:grid;gap:10px"><div class="row" style="gap:10px"><span style="font-size:26px">🎁</span><div style="flex:1"><h3>Пригласи друга</h3><div class="muted small">Друг получит +100 монет на старте. Тренироваться вместе — проще не бросить.</div></div></div>
+      <button class="btn" data-act="share">${IC.share}Пригласить</button></div>
     ${PRO.enabled ? proCard() : ''}
     ${igCard()}
     <div class="card" style="display:grid;gap:10px"><h3>Данные</h3><div class="muted small">Прогресс хранится на устройстве${PF.inTG ? ' и в облаке Telegram — он сохранится при входе с другого телефона' : ''}.</div>
@@ -891,9 +893,10 @@ function finishCreator() {
   } else if (Math.abs(c.weight - curWeight()) >= 0.1) {
     S.weights = S.weights.filter(x => x.d !== today()); S.weights.push({ d:today(), w:c.weight });
   }
+  const bonus = isNew && inviteBonus();
   S.char = c; save(); syncPlan();
   closeAll(); render();
-  if (isNew) toast(`Персонаж создан! ${D.progById[S.program.id].name}`);
+  if (isNew) toast(bonus ? 'Персонаж создан! Подарок от друга: +100 монет 🪙' : `Персонаж создан! ${D.progById[S.program.id].name}`);
 }
 
 /* ---------- Гардероб ---------- */
@@ -944,10 +947,25 @@ function showLevelUp(lvl) {
   w.addEventListener('click', e => { const b = e.target.closest('[data-x]'); if (b?.dataset.x === 'share') share(); if (b || e.target === w) w.remove(); });
   layer.appendChild(w);
 }
+function inviteUrl() { const u = PF.tgUser(); return APP_URL + '?startapp=r' + (u ? u.id : '0'); }
+function shareText() { const L = levelInfo(); return `Мой персонаж в FitAvatar достиг ${L.lvl} уровня (${L.rank})! ${totalWorkouts()} тренировок, серия ${streak()} дн. Присоединяйся — по ссылке +100 монет на старте 💪`; }
 function share() {
-  const L = levelInfo();
-  const text = `Мой персонаж в FitAvatar достиг ${L.lvl} уровня (${L.rank})! ${totalWorkouts()} тренировок, серия ${streak()} дн.`;
-  PF.openLink(`https://t.me/share/url?url=${encodeURIComponent(APP_URL)}&text=${encodeURIComponent(text + (CFG.instagram ? ` Автор: instagram.com/${CFG.instagram}` : ''))}`);
+  const story = PF.inTG && PF.TG.shareToStory && PF.TG.isVersionAtLeast && PF.TG.isVersionAtLeast('7.8');
+  if (!story) return shareFriend();
+  openSheet(`<div class="sheet-head"><div><h2>Поделиться</h2><div class="muted small">Друзья по вашей ссылке получают +100 монет на старте</div></div><button class="icon-btn" data-act="close" aria-label="Закрыть">${IC.close}</button></div>
+    <button class="btn" data-act="share-story">📸 В историю Telegram</button>
+    <button class="btn ghost" data-act="share-friend">${IC.share}Отправить другу</button>`);
+}
+function shareFriend() { PF.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteUrl())}&text=${encodeURIComponent(shareText())}`); }
+function shareStory() {
+  const img = location.origin + location.pathname.replace(/[^/]*$/, '') + 'promo-1.jpg';
+  try { PF.TG.shareToStory(img, { text: shareText().slice(0, 180) + ' ' + inviteUrl() }); } catch (e) { shareFriend(); }
+}
+// бонус приглашённому: ссылка t.me/<bot>?startapp=r<id>
+function inviteBonus() {
+  try { const sp = PF.inTG && PF.TG.initDataUnsafe && PF.TG.initDataUnsafe.start_param; const me = PF.tgUser();
+    if (sp && /^r\d+$/.test(sp) && (!me || sp !== 'r' + me.id) && !S.invitedBy) { S.invitedBy = sp.slice(1); S.coins = (S.coins || 0) + 100; return true; } } catch (e) {}
+  return false;
 }
 // Ссылка на ваш бот/приложение — замените на свою
 const APP_URL = 'https://t.me/' + (CFG.bot || 'fitavatar_app_bot');
@@ -1037,6 +1055,9 @@ const acts = {
   import: () => openImport(),
   reset: () => confirmBox('Удалить персонажа и весь прогресс?', 'Удалить', () => { PF.store.clear(); S = defaults(); migrateLook(); save(); closeAll(); render(); }),
   share: () => share(),
+  'share-story': () => { closeAll(); shareStory(); },
+  'share-friend': () => { closeAll(); shareFriend(); },
+  invite: () => shareFriend(),
   ig: () => PF.openLink(igUrl()),
   'ig-gate': () => { PF.openLink(igUrl()); S.igClicked = true; save(); setTimeout(render, 800); },
   'ig-ok': () => { if (!S.igClicked) return; S.igOk = true; save(); PF.haptic('success'); closeAll(); render(); toast('Готово! Открыты функции для подписчиков'); },
