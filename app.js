@@ -333,13 +333,10 @@ function taskRow(id, title, sub, xp, done, exId, auto = false, custom = false) {
 }
 
 /* ---------- Тренировки ---------- */
-let wSeg = 'programs', wFilter = 'all', exFilter = 'все', exQuery = '', mGoal = null;
+let wSeg = 'programs', wFilter = 'all', exFilter = 'все', exQuery = '', exEq = 'все', mGoal = null;
 function vWorkouts() {
   const filters = [['all','Все'],['home','Дома'],['gym','Зал'],['lose','Похудение'],['cut','Сушка'],['gain','Масса'],['bulk','Для худых'],['fit','Форма']];
   const progs = D.PROGRAMS.filter(p => !p.mine && (wFilter === 'all' || p.place === wFilter || p.goal === wFilter));
-  const present = new Set(D.EX.flatMap(x => x.muscles)); const groups = ['все', ...(D.MUSCLE_ORDER || []).filter(g => present.has(g)), ...[...present].filter(g => !(D.MUSCLE_ORDER || []).includes(g))];
-  const q = exQuery.trim().toLowerCase();
-  const exs = D.EX.filter(x => (exFilter === 'все' || x.muscles.includes(exFilter)) && (!q || x.name.toLowerCase().includes(q)));
   const goalName = { lose:'Похудение', cut:'Сушка', gain:'Масса', bulk:'Для худых', fit:'Форма' };
   return `<section class="screen">
   <h1>Тренировки</h1>
@@ -352,12 +349,36 @@ function vWorkouts() {
       <div class="muted small">${esc(p.desc)}</div>
       <div class="tags"><span class="tag">${p.place === 'gym' ? 'Зал' : 'Дома'}</span><span class="tag">${goalName[p.goal]}</span><span class="tag">${esc(p.level)}</span><span class="tag">${p.days.length} ${plural(p.days.length,'день','дня','дней')} в цикле</span><span class="tag">${p.weeks} нед.</span></div>
     </button>`).join('')}</div>` : `
-  <input class="search" type="search" placeholder="Найти упражнение" value="${esc(exQuery)}" data-input="exq" aria-label="Поиск упражнения">
-  <div class="chips">${groups.map(g => `<button class="chip ${exFilter === g ? 'on' : ''}" data-act="exfilter" data-v="${esc(g)}">${esc(g[0].toUpperCase() + g.slice(1))}</button>`).join('')}</div>
-  <div class="list" id="exlist">${exs.map(exRow).join('') || '<div class="muted">Ничего не найдено</div>'}</div>`}
+  ${exLib()}`}
 </section>`;
 }
 const typeName = { str:'Сила', cardio:'Кардио', flex:'Растяжка' };
+/* ---------- Библиотека упражнений: группы → инвентарь → карточки с кадрами техники ---------- */
+const exPic = (x, cls = '') => x.img
+  ? `<span class="xpic ${cls}"><img src="${D.exImg(x, 'a')}" alt="" loading="lazy" decoding="async"><img class="b" src="${D.exImg(x, 'b')}" alt="" loading="lazy" decoding="async"></span>`
+  : `<span class="xpic svg ${cls}" data-anim="${x.anim}"></span>`;
+const plEx = (n) => `${n} ${plural(n, 'упражнение', 'упражнения', 'упражнений')}`;
+const exCard = (x) => `<button class="xcard" data-act="ex" data-id="${x.id}">${exPic(x)}
+  <span class="xc-b"><b>${esc(x.name)}</b><span class="xc-eq">${esc(x.eq || '')}</span></span>${exLocked(x) ? `<span class="xc-lock">${exTier(x) >= 2 ? '⭐' : '🔒'}</span>` : ''}</button>`;
+const exMatch = (x, q) => x.name.toLowerCase().includes(q) || (x.muscles || []).some(m => m.includes(q)) || (x.eq || '').includes(q);
+function exLib() {
+  const q = exQuery.trim().toLowerCase();
+  const search = `<input class="search" type="search" placeholder="Найти: «жим», «гантели», «спина»…" value="${esc(exQuery)}" data-input="exq" aria-label="Поиск упражнения">`;
+  if (q) { const r = D.EX.filter(x => exMatch(x, q)); return `${search}<div class="muted small" id="excount">${plEx(r.length)}</div><div class="xgrid" id="exlist">${r.map(exCard).join('') || '<div class="muted">Ничего не найдено — попробуйте другое слово.</div>'}</div>`; }
+  const g = D.GROUPS.find(g => g.id === exFilter);
+  if (!g) {
+    const total = D.EX.length, withImg = D.EX.filter(x => x.img).length;
+    return `${search}<div class="muted small">${plEx(total)} · ${withImg} с фото техники · штанга, гантели, тренажёры, блоки и свой вес</div>
+    <div class="mgrid">${D.GROUPS.map(g => { const L = g.list(); if (!L.length) return ''; const c = D.exById[g.cover] || L.find(x => x.img) || L[0];
+      return `<button class="mtile" data-act="exfilter" data-v="${esc(g.id)}">${exPic(c, 'still')}<span class="mt-b"><b>${esc(g.name)}</b><span>${plEx(L.length)}</span></span></button>`; }).join('')}</div>`;
+  }
+  const L = g.list(), eqs = D.EQ_ORDER.filter(e => L.some(x => x.eq === e)), eq = eqs.includes(exEq) ? exEq : 'все';
+  const list = L.filter(x => eq === 'все' || x.eq === eq).sort((a, b) => (b.img ? 1 : 0) - (a.img ? 1 : 0));
+  return `<div class="ghead"><button class="icon-btn" data-act="exfilter" data-v="все" aria-label="Все группы">${IC.chev.replace('<svg', '<svg style="transform:rotate(180deg)"')}</button><div><h2>${esc(g.name)}</h2><div class="muted small">${plEx(L.length)}</div></div></div>
+    <div class="chips">${['все', ...eqs].map(e => `<button class="chip ${eq === e ? 'on' : ''}" data-act="exeq" data-v="${esc(e)}">${e === 'все' ? 'Всё' : esc(e[0].toUpperCase() + e.slice(1))} <span class="cnt">${e === 'все' ? L.length : L.filter(x => x.eq === e).length}</span></button>`).join('')}</div>
+    <div class="xgrid" id="exlist">${list.map(exCard).join('')}</div>`;
+}
+
 function myPlanCard() {
   const c = S.char, p = D.progById.my, n = c.days || 3, on = S.program.id === 'my';
   return `<div class="card myplan" style="display:grid;gap:12px;${on ? 'box-shadow:inset 0 0 0 2px var(--accent)' : ''}">
@@ -369,13 +390,13 @@ function myPlanCard() {
     <div class="row" style="gap:8px"><button class="btn sm ghost" data-act="prog" data-id="my">Упражнения плана</button>${on ? '' : `<button class="btn sm" data-act="plan-use">Тренироваться по плану</button>`}</div>
   </div>`;
 }
-const exRow = (x) => `<button class="exrow" data-act="ex" data-id="${x.id}"><span class="exthumb" data-anim="${x.anim}"></span><span style="flex:1;min-width:0"><b>${esc(x.name)}</b><br><span class="muted small">${typeName[x.type]} · ${esc(x.muscles.join(', '))}</span></span>${exLocked(x) ? lockTag(exTier(x)) : IC.chev.replace('<svg', '<svg width="20" height="20"')}</button>`;
+const exRow = (x) => `<button class="exrow" data-act="ex" data-id="${x.id}">${exPic(x, 'sm')}<span style="flex:1;min-width:0"><b>${esc(x.name)}</b><br><span class="muted small">${typeName[x.type]} · ${esc(x.muscles.join(', '))}</span></span>${exLocked(x) ? lockTag(exTier(x)) : IC.chev.replace('<svg', '<svg width="20" height="20"')}</button>`;
 
 function openProgram(id) {
   const p = D.progById[id];
   openSheet(`<div class="sheet-head"><div><h2>${esc(p.name)}</h2><div class="muted small">${esc(p.desc)}</div></div><button class="icon-btn" data-act="close" aria-label="Закрыть">${IC.close}</button></div>
     ${p.days.map((dd, i) => `<div class="card" style="display:grid;gap:8px"><div class="row between"><h3>${esc(dd.name)}</h3><span class="muted small">~${Math.round(dd.items.reduce((s, it) => s + it.sets * ((it.time || it.reps * 3) + S.settings.rest), 0) / 60)} мин</span></div>
-      ${dd.items.map(it => `<button class="exrow" style="background:var(--bg)" data-act="ex" data-id="${it.ex}"><span class="exthumb" data-anim="${D.exById[it.ex].anim}"></span><span style="flex:1"><b>${esc(D.exById[it.ex].name)}</b><br><span class="muted small">${fmtWork(it)}</span></span></button>`).join('')}
+      ${dd.items.map(it => `<button class="exrow" style="background:var(--bg)" data-act="ex" data-id="${it.ex}">${exPic(D.exById[it.ex], 'sm')}<span style="flex:1"><b>${esc(D.exById[it.ex].name)}</b><br><span class="muted small">${fmtWork(it)}</span></span></button>`).join('')}
       ${S.program.id === p.id ? `<button class="btn ghost sm" data-act="session" data-prog="${p.id}" data-day="${i}">${IC.play}Начать этот день</button>` : ''}</div>`).join('')}
     ${S.program.id === p.id ? '<div class="muted small">Это ваша текущая программа.</div>' : isLocked(p.id) ? `<button class="btn" data-act="pro">${IC.crown}${progTier(p.id) >= 2 ? 'Открыть в полном пакете' : 'Открыть для подписчиков'}</button>` : `<button class="btn" data-act="prog-pick" data-id="${p.id}">Выбрать программу</button>`}`);
   mountThumbs(layer);
@@ -384,14 +405,17 @@ let stopDemo = null;
 function openExercise(id) {
   const x = D.exById[id];
   if (exLocked(x)) return openPro(exTier(x) >= 2 && tier() >= 1 ? `«${x.name}» — в полном пакете.` : `Бесплатно открыты 2 упражнения. «${x.name}» и вся техника — после подписки или в полном пакете.`);
-  const sh = openSheet(`<div class="sheet-head"><div><h2>${esc(x.name)}</h2><div class="tags" style="margin-top:6px"><span class="tag a">${typeName[x.type]}</span>${x.muscles.map(m => `<span class="tag">${esc(m)}</span>`).join('')}<span class="tag">${x.place === 'gym' ? 'Зал / инвентарь' : 'Без инвентаря'}</span></div></div><button class="icon-btn" data-act="close" aria-label="Закрыть">${IC.close}</button></div>
-    <div class="demo" id="demo"></div>
+  const alts = D.EX.filter(y => y.id !== x.id && y.muscles[0] === x.muscles[0]).sort((a, b) => (b.img ? 2 : 0) + (b.eq !== x.eq ? 1 : 0) - (a.img ? 2 : 0) - (a.eq !== x.eq ? 1 : 0)).slice(0, 8);
+  const sh = openSheet(`<div class="sheet-head"><div><h2>${esc(x.name)}</h2><div class="tags" style="margin-top:6px"><span class="tag a">${esc(x.eq || typeName[x.type])}</span>${x.muscles.map(m => `<span class="tag">${esc(m)}</span>`).join('')}<span class="tag">${x.place === 'gym' ? 'Зал' : 'Можно дома'}</span></div></div><button class="icon-btn" data-act="close" aria-label="Закрыть">${IC.close}</button></div>
+    ${x.img ? `<div class="xhero">${exPic(x, 'big')}<span class="xh-l a">Старт</span><span class="xh-l b">Финиш</span></div>
+    <div class="xframes"><figure><img src="${D.exImg(x, 'a')}" alt="Исходное положение"><figcaption>1 · Исходное положение</figcaption></figure><figure><img src="${D.exImg(x, 'b')}" alt="Конечная точка"><figcaption>2 · Пиковое сокращение</figcaption></figure></div>` : `<div class="demo" id="demo"></div>`}
     <div><h3 style="margin-bottom:8px">Как выполнять</h3><ol class="steps">${x.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
     <div><h3 style="margin-bottom:8px">Частые ошибки</h3><ul class="clean">${x.mistakes.map(s => `<li>${esc(s)}</li>`).join('')}</ul></div>
     <div class="card"><b>Дыхание.</b> ${esc(x.breath)}</div>
     ${exCoach(x)}
+    ${alts.length ? `<div><h3 style="margin-bottom:8px">Альтернативы на ${esc(x.muscles[0])}</h3><div class="xalt">${alts.map(exCard).join('')}</div></div>` : ''}
     <button class="btn ghost" data-act="video" data-q="${esc(x.name + ' техника выполнения')}">${IC.video}Видео с техникой</button>`, { onClose: () => stopDemo && stopDemo() });
-  stopDemo = ExAnim.mount($('#demo', sh), x.anim);
+  stopDemo = null; const dm = $('#demo', sh); if (dm) stopDemo = ExAnim.mount(dm, x.anim); mountThumbs(sh);
 }
 function exCoach(x) {
   const g = S.char.goal, L = COACH.last(S.log, x.id), best = COACH.best(S.log, x.id), sw = COACH.swaps(x, S.char.place);
@@ -402,7 +426,7 @@ function exCoach(x) {
     ${L ? `<li>Последний раз: ${L.sets.map(s => s[0] ? `${COACH.fmtW(s[0])}×${s[1]}` : `${s[1]}`).join(', ')}${best ? ` · рекорд ${COACH.fmtW(best)}` : ''}</li>` : ''}</ul>
     ${sw.length ? `<div class="small muted">Нет тренажёра или неудобно? Замени на: ${sw.map(s => `<button class="link" data-act="ex" data-id="${s.id}">${esc(s.name)}</button>`).join(', ')}</div>` : ''}</div>`;
 }
-function mountThumbs(root = document) { root.querySelectorAll('[data-anim]:not(.m)').forEach(el => { el.classList.add('m'); ExAnim.mount(el, el.dataset.anim, 'var(--ink)'); }); }
+function mountThumbs(root = document) { root.querySelectorAll('[data-anim]:not(.m)').forEach(el => { el.classList.add('m'); ExAnim.mount(el, el.dataset.anim, el.classList.contains('xpic') ? '#e9ebf0' : 'var(--ink)'); }); }
 
 /* ---------- Режим тренировки ---------- */
 let sess = null, sessTimer = null;
@@ -472,7 +496,7 @@ function renderSession() {
       ${workCoach(cur, goal)}
       ${cur.it.time && !sess.left ? `<button class="btn" data-act="s-timer">${IC.play}Старт ${work}</button>` : cur.it.time ? `<button class="btn ghost" data-act="s-set">Завершить подход</button>` : `<button class="btn" data-act="s-set">${IC.check}Подход выполнен</button>`}
       <button class="link" data-act="s-next">Пропустить упражнение</button>`}`;
-  if (sess.phase === 'work') { stopDemo && stopDemo(); stopDemo = ExAnim.mount($('#sdemo', box), cur.ex.anim); }
+  if (sess.phase === 'work') { stopDemo && stopDemo(); stopDemo = null; const sd = $('#sdemo', box); if (cur.ex.img) { sd.className = 'xhero'; sd.innerHTML = exPic(cur.ex, 'big') + '<span class="xh-l a">Старт</span><span class="xh-l b">Финиш</span>'; } else stopDemo = ExAnim.mount(sd, cur.ex.anim); }
   if (sess.phase === 'rest') { const tt = $('#rtip', box); if (tt) tt.textContent = restTip(cur); }
   if (sess.left > 0) {
     sessTimer = setInterval(() => {
@@ -977,7 +1001,8 @@ const acts = {
   'plan-days': (b) => { S.char.days = +b.dataset.v; S.program = { id:'my', next:0 }; save(); render(); toast(`План: ${b.dataset.v} ${+b.dataset.v < 5 ? 'тренировки' : 'тренировок'} в неделю`); },
   'plan-place': (b) => { S.char.place = b.dataset.v; if (S.program.id === 'my') S.program.next = 0; save(); render(); toast(b.dataset.v === 'gym' ? 'План для зала' : 'План для дома'); },
   'plan-use': () => { S.program = { id:'my', next:0 }; save(); render(); toast('Тренируетесь по своему плану'); },
-  exfilter: (b) => { exFilter = b.dataset.v; render(); },
+  exfilter: (b) => { exFilter = b.dataset.v; exEq = 'все'; exQuery = ''; render(); window.scrollTo(0, 0); },
+  exeq: (b) => { exEq = b.dataset.v; render(); },
   prog: (b) => openProgram(b.dataset.id),
   'prog-pick': (b) => { if (isLocked(b.dataset.id)) return openPro(); S.program = { id:b.dataset.id, next:0 }; save(); closeAll(); render(); toast('Программа выбрана'); },
   video: (b) => PF.openLink('https://www.youtube.com/results?search_query=' + encodeURIComponent(b.dataset.q)),
@@ -1058,7 +1083,9 @@ document.addEventListener('input', (e) => {
   const t = e.target;
   if (t.dataset.r && draft) { draft[t.dataset.r] = +t.value; const unit = t.dataset.r === 'age' ? plural(+t.value,'год','года','лет') : t.dataset.u; $('#o_' + t.dataset.r).textContent = `${t.value} ${unit}`; refreshPreview(); }
   if (t.dataset.set) { S.settings[t.dataset.set] = +t.value; t.nextElementSibling.textContent = t.dataset.set === 'rest' ? t.value + ' сек' : fmt(+t.value); save(); }
-  if (t.dataset.input === 'exq') { exQuery = t.value; const list = $('#exlist'); if (list) { const q = exQuery.trim().toLowerCase(); list.innerHTML = D.EX.filter(x => (exFilter === 'все' || x.muscles.includes(exFilter)) && (!q || x.name.toLowerCase().includes(q))).map(exRow).join('') || '<div class="muted">Ничего не найдено</div>'; mountThumbs(list); } }
+  if (t.dataset.input === 'exq') { const was = !!exQuery.trim(); exQuery = t.value; const q = exQuery.trim().toLowerCase(), list = $('#exlist');
+    if (q && was && list) { const r = D.EX.filter(x => exMatch(x, q)); list.innerHTML = r.map(exCard).join('') || '<div class="muted">Ничего не найдено — попробуйте другое слово.</div>'; const c = $('#excount'); if (c) c.textContent = plEx(r.length); mountThumbs(list); }
+    else { render(); const i = $('[data-input="exq"]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } } }
 });
 document.addEventListener('keydown', e => { const pop = document.querySelector('.overlay.center'); if (e.key === 'Escape' && pop) { pop.remove(); return; } if (e.key === 'Escape' && stack.length && !(!S.char && $('#creator'))) closeTop(); });
 
