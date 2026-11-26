@@ -46,7 +46,7 @@ const IC = {
 const blankDay = () => ({ done:{}, water:0, steps:0, stepsXp:0, food:[], workouts:[], xp:0 });
 const defaults = () => ({
   v:1, ts:Date.now(), char:null, fit:{ muscleGain:0, fatLoss:0 }, xp:0, stats:{ str:0, end:0, flex:0, disc:0 },
-  days:{}, tasks:[], weights:[], program:{ id:'start', next:0 }, ach:{},
+  days:{}, tasks:[], weights:[], log:{}, program:{ id:'start', next:0 }, ach:{},
   settings:{ stepGoal:8000, rest:45, remind:false, remindAt:'19:00', health:false }, lastActive:null, tab:'home',
 });
 let S = Object.assign(defaults(), PF.store.load() || {});
@@ -288,10 +288,32 @@ function vHome() {
     ${D.HABITS.map(h => taskRow(h.id, h.title, h.auto === 'water' ? `${d.water} из ${t.glasses} стаканов` : h.auto === 'steps' ? `${fmt(d.steps)} из ${fmt(S.settings.stepGoal)}` : 'Отметьте вечером', h.xp, habitDone(h), null, !!h.auto)).join('')}
     ${S.tasks.map(tk => taskRow(tk.id, tk.title, 'Свой пункт · каждый день', tk.xp, d.done[tk.id], null, false, true)).join('')}
   </div>
-  <div class="card"><div class="muted small" style="font-weight:700;margin-bottom:4px">Совет дня</div>${esc(tip)}</div>
+  ${coachCard(plan, wDone, t, e, tip)}
   ${PRO.enabled !== false && tier() < 2 ? proBanner() : ''}
   ${igCard()}
 </section>`;
+}
+function weekWorkouts() { const n = new Date(), mon = new Date(n); mon.setDate(n.getDate() - ((n.getDay() + 6) % 7)); let k = 0; for (let i = 0; i < 7; i++) { const x = new Date(mon); x.setDate(mon.getDate() + i); const d = S.days[dkey(x)]; if (d) k += d.workouts.length; } return k; }
+function coachMsgs(plan, wDone, t, e) {
+  const c = S.char, out = [], idle = idleDays(), wk = weekWorkouts(), need = c.days || 3, h = new Date().getHours();
+  if (idle >= 3) out.push(`Ты не тренировался ${idle} ${plural(idle,'день','дня','дней')}. Ничего страшного — сегодня сделай тренировку на 70%: те же упражнения, веса чуть меньше. Главное — вернуться в ритм.`);
+  if (!wDone && wk < need) out.push(`Сегодня по плану: «${plan.pd.name}» — ${plan.items.length} упражнений, примерно ${Math.round(plan.items.reduce((s, x) => s + x.it.sets * ((x.it.time || x.it.reps * 3) + COACH.rest(x.ex, c.goal)), 0) / 60) + 7} минут. Я проведу тебя по каждому подходу и подскажу вес.`);
+  else if (!wDone && wk >= need) out.push(`На этой неделе уже ${wk} из ${need} тренировок — сегодня день восстановления. Прогулка 8–10 тысяч шагов и сон 7–9 часов дадут мышцам вырасти.`);
+  else out.push('Тренировка сделана — отлично! Теперь важно восстановление: белок в ближайшие 2 часа, вода и сон.');
+  if (tier() >= 1) {
+    const lp = t.p - e.p;
+    if (h >= 12 && lp > 30) { const f = COACH.proteinFix(lp, t.kcal - e.kcal); if (f.length) out.push(`До нормы белка ещё ${Math.round(lp)} г. Проще всего закрыть: ${f.map(x => `${x.n.toLowerCase()} ${x.g} г (${x.p} г белка)`).join(' + ')}.`); }
+  }
+  const d = day(); if (h >= 14 && d.water < t.glasses / 2) out.push(`Выпито ${d.water} из ${t.glasses} стаканов воды. Даже 2% обезвоживания снижают силу — выпей стакан сейчас.`);
+  const lastW = S.weights.length ? S.weights[S.weights.length - 1].d : null;
+  if (!lastW || (new Date(today()) - new Date(lastW)) / 864e5 >= 7) out.push('Неделя без взвешивания. Взвесься завтра утром натощак, после туалета — так я смогу проверить, правильно ли подобраны калории.');
+  return out;
+}
+function coachCard(plan, wDone, t, e, tip) {
+  const m = coachMsgs(plan, wDone, t, e);
+  return `<div class="card coach"><div class="row" style="gap:10px;margin-bottom:8px"><span class="coach-ic">💬</span><div><b>Тренер</b><div class="muted small">советы на сегодня</div></div></div>
+    <ul class="clean">${m.slice(0, 3).map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+    <div class="muted small" style="margin-top:8px">💡 ${esc(tip)}</div></div>`;
 }
 function greet() { const h = new Date().getHours(); return h < 6 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер'; }
 const fmtWork = (it) => `${it.sets} × ${it.time ? it.time + ' сек' : it.reps + ' раз'}`;
@@ -362,8 +384,18 @@ function openExercise(id) {
     <div><h3 style="margin-bottom:8px">Как выполнять</h3><ol class="steps">${x.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
     <div><h3 style="margin-bottom:8px">Частые ошибки</h3><ul class="clean">${x.mistakes.map(s => `<li>${esc(s)}</li>`).join('')}</ul></div>
     <div class="card"><b>Дыхание.</b> ${esc(x.breath)}</div>
+    ${exCoach(x)}
     <button class="btn ghost" data-act="video" data-q="${esc(x.name + ' техника выполнения')}">${IC.video}Видео с техникой</button>`, { onClose: () => stopDemo && stopDemo() });
   stopDemo = ExAnim.mount($('#demo', sh), x.anim);
+}
+function exCoach(x) {
+  const g = S.char.goal, L = COACH.last(S.log, x.id), best = COACH.best(S.log, x.id), sw = COACH.swaps(x, S.char.place);
+  const sets = x.type !== 'str' ? '' : g === 'gain' || g === 'bulk' ? (COACH.isBasic(x.id) ? '3–4 подхода × 6–10' : '3 подхода × 10–15') : g === 'lose' ? '3 подхода × 12–15' : '3–4 подхода × 8–12';
+  return `<div class="card coach" style="display:grid;gap:8px"><div class="row" style="gap:10px"><span class="coach-ic">💬</span><b>Советы тренера под вашу цель</b></div>
+    <ul class="clean">${sets ? `<li>Подходы и повторы: <b>${sets}</b></li>` : ''}${COACH.rir(x, g) ? `<li>Вес: оставляй ${esc(COACH.rir(x, g))}</li>` : ''}<li>Отдых между подходами: <b>${COACH.rest(x, g)} сек</b></li>
+    <li>Прогрессия: когда все подходы сделаны на верхней границе повторов — добавь 2,5–5% веса.</li>
+    ${L ? `<li>Последний раз: ${L.sets.map(s => s[0] ? `${COACH.fmtW(s[0])}×${s[1]}` : `${s[1]}`).join(', ')}${best ? ` · рекорд ${COACH.fmtW(best)}` : ''}</li>` : ''}</ul>
+    ${sw.length ? `<div class="small muted">Нет тренажёра или неудобно? Замени на: ${sw.map(s => `<button class="link" data-act="ex" data-id="${s.id}">${esc(s.name)}</button>`).join(', ')}</div>` : ''}</div>`;
 }
 function mountThumbs(root = document) { root.querySelectorAll('[data-anim]:not(.m)').forEach(el => { el.classList.add('m'); ExAnim.mount(el, el.dataset.anim, 'var(--ink)'); }); }
 
@@ -374,24 +406,44 @@ function startSession(progId, dayIdx) {
   if (progId && dayIdx != null && (progId !== plan.prog.id || +dayIdx !== plan.di)) { S.program = { id:progId, next:+dayIdx, pin:{ d:today(), day:+dayIdx } }; save(); }
   const p = todayPlan(), d = day();
   const first = p.items.findIndex(x => !d.done[x.id]);
-  sess = { plan:p, i: first < 0 ? 0 : first, set:1, phase:'work', left:0, xp:0, startXp:S.xp, startTs:Date.now() };
+  sess = { plan:p, i: first < 0 ? 0 : first, set:1, phase: first <= 0 ? 'brief' : 'work', left:0, xp:0, startXp:S.xp, startTs:Date.now(), log:{}, w:null, r:null };
   closeAll();
-  openSheet('<div id="sess"></div>', { full:true, onClose: () => { clearInterval(sessTimer); sess = null; render(); } });
+  openSheet('<div id="sess"></div>', { full:true, onClose: () => { clearInterval(sessTimer); if (sess && !sess.logSaved) saveSessLog(); sess = null; render(); } });
   renderSession();
 }
 function renderSession() {
   const box = $('#sess'); if (!box || !sess) return;
   clearInterval(sessTimer);
-  const { plan } = sess, cur = plan.items[sess.i];
+  const { plan } = sess, cur = plan.items[sess.i], goal = S.char.goal;
+  if (sess.phase === 'brief') {
+    const b = COACH.brief(plan, goal, S.log);
+    box.innerHTML = `<div class="session-top"><button class="icon-btn" data-act="close" aria-label="Выйти">${IC.close}</button><div class="muted small" style="font-weight:700">Перед тренировкой</div><span style="width:44px"></span></div>
+      <div class="card coach"><div class="row" style="gap:10px"><span class="coach-ic">💬</span><div><h2>${esc(plan.pd.name)}</h2><div class="muted small">~${b.mins} мин · цель — ${esc(b.G)}</div></div></div>
+        <div class="tags" style="margin-top:10px">${b.muscles.map(m => `<span class="tag">${esc(m)}</span>`).join('')}</div>
+        <p style="margin-top:10px">${esc(b.rep)}</p></div>
+      <div class="card"><h3 style="margin-bottom:8px">Разминка 5–7 минут</h3><ol class="steps">${b.warm.map(x => `<li>${esc(x)}</li>`).join('')}</ol></div>
+      <div class="card"><h3 style="margin-bottom:8px">План</h3>${plan.items.map(x => `<div class="row between small" style="padding:4px 0"><span>${esc(x.ex.name)}</span><span class="muted">${fmtWork(x.it)} · отдых ${COACH.rest(x.ex, goal)} с</span></div>`).join('')}</div>
+      <button class="btn" data-act="s-go">${IC.play}Разминка сделана — начинаем</button>`;
+    return;
+  }
   if (sess.phase === 'done') {
     const gained = S.xp - sess.startXp, mins = Math.max(1, Math.round((Date.now() - sess.startTs) / 60000));
     const kcal = Math.round(plan.items.reduce((s, x) => s + x.it.sets * (x.it.time || x.it.reps * 3) * x.ex.kcal * curWeight() / 70 / 6, 0));
+    const rv = COACH.review(sess.log, S.log); saveSessLog();
+    const nextName = (() => { const pr = plan.prog, n = pr.days[(plan.di + 1) % pr.days.length]; return n ? n.name : ''; })();
     box.innerHTML = `<div class="session-top"><span></span><button class="icon-btn" data-act="close" aria-label="Закрыть">${IC.close}</button></div>
       <div class="arena" style="grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center">
         <div class="stage" style="height:280px">${avatarSVG({ glow:true })}</div>
         <div class="info" style="align-items:center"><h1 style="color:#fff">Тренировка завершена</h1><div style="color:#d4d6de">${esc(plan.pd.name)}</div></div></div>
       <div class="kv"><div><b>+${gained}</b><span>опыта</span></div><div><b>${mins}</b><span>минут</span></div><div><b>~${kcal}</b><span>ккал</span></div></div>
       <div class="muted small">Персонаж стал сильнее. Форма: ${AV.formScore(charNow(), S.fit)}%.</div>
+      <div class="card coach"><div class="row" style="gap:10px;margin-bottom:6px"><span class="coach-ic">💬</span><b>Разбор тренера</b></div><ul class="clean">
+        ${rv.vol ? `<li>Общий тоннаж: <b>${fmt(rv.vol)} кг</b>. Растёт от тренировки к тренировке — значит, растут и мышцы.</li>` : ''}
+        ${rv.prs.map(x => `<li>🏆 Новый рекорд: <b>${esc(x.name)} — ${COACH.fmtW(x.w)}</b></li>`).join('')}
+        <li>В ближайшие 1–2 часа съешь 20–40 г белка и порцию углеводов: например, курица с рисом или творог с бананом.</li>
+        <li>Пей воду: ещё 2–3 стакана до вечера.</li>
+        ${nextName ? `<li>Следующая тренировка: «${esc(nextName)}». Между тренировками одной мышцы — 48 часов отдыха.</li>` : ''}
+      </ul></div>
       <button class="btn" data-act="close">Готово</button>
       <button class="btn ghost" data-act="share">${IC.share}Поделиться прогрессом</button>`;
     return;
@@ -406,14 +458,17 @@ function renderSession() {
     ${sess.phase === 'rest' ? `
       <div style="text-align:center;display:grid;gap:8px;padding:20px 0"><div class="muted">Отдых</div><div class="big" id="clock">${sess.left}</div>
       <div class="muted small">Дальше: ${esc(sess.set <= cur.it.sets ? `${cur.ex.name}, подход ${sess.set}` : nextIt ? nextIt.ex.name : 'финиш')}</div></div>
+      <div class="card coach small"><span class="coach-ic">💬</span> <span id="rtip"></span></div>
       <div class="grid2"><button class="btn ghost" data-act="s-plus">+15 сек</button><button class="btn" data-act="s-skip">Пропустить</button></div>` : `
       <div class="demo" id="sdemo"></div>
       <div style="text-align:center;display:grid;gap:6px"><h2>${esc(cur.ex.name)}</h2>
         <div class="big" id="clock">${cur.it.time ? (sess.left || cur.it.time) : cur.it.reps}</div>
         <div class="muted">${cur.it.time ? 'секунд' : 'повторений'} · подход ${sess.set} из ${cur.it.sets}</div><div class="setdots">${dots}</div></div>
+      ${workCoach(cur, goal)}
       ${cur.it.time && !sess.left ? `<button class="btn" data-act="s-timer">${IC.play}Старт ${work}</button>` : cur.it.time ? `<button class="btn ghost" data-act="s-set">Завершить подход</button>` : `<button class="btn" data-act="s-set">${IC.check}Подход выполнен</button>`}
       <button class="link" data-act="s-next">Пропустить упражнение</button>`}`;
   if (sess.phase === 'work') { stopDemo && stopDemo(); stopDemo = ExAnim.mount($('#sdemo', box), cur.ex.anim); }
+  if (sess.phase === 'rest') { const tt = $('#rtip', box); if (tt) tt.textContent = restTip(cur); }
   if (sess.left > 0) {
     sessTimer = setInterval(() => {
       sess.left--; const c = $('#clock'); if (c) c.textContent = sess.left;
@@ -422,8 +477,32 @@ function renderSession() {
     }, 1000);
   }
 }
+function workCoach(cur, goal) {
+  const cu = COACH.cue(cur.ex), rr = COACH.rir(cur.ex, goal);
+  let w = '';
+  if (COACH.usesWeight(cur.ex)) {
+    const sg = COACH.suggest(S.log, cur.ex, cur.it);
+    if (sess.w == null) sess.w = (sess.log[cur.ex.id] && sess.log[cur.ex.id].length) ? sess.log[cur.ex.id][sess.log[cur.ex.id].length - 1][0] : (sg && sg.w) || 0;
+    if (sess.r == null) sess.r = cur.it.reps || 10;
+    w = `<div class="card" style="display:grid;gap:10px"><div class="row between"><span class="muted small">Вес</span><span class="muted small">Повторы</span></div>
+      <div class="row between"><div class="stepper"><button data-act="s-w" data-v="-2.5">−</button><b>${COACH.fmtW(sess.w)}</b><button data-act="s-w" data-v="2.5">+</button></div>
+      <div class="stepper"><button data-act="s-r" data-v="-1">−</button><b>${sess.r}</b><button data-act="s-r" data-v="1">+</button></div></div>
+      ${sg ? `<div class="small">🎯 ${esc(sg.text)}</div>` : ''}</div>`;
+  } else if (!cur.it.time) { if (sess.r == null) sess.r = cur.it.reps; w = `<div class="card"><div class="row between"><span class="muted small">Сделал повторов</span><div class="stepper"><button data-act="s-r" data-v="-1">−</button><b>${sess.r}</b><button data-act="s-r" data-v="1">+</button></div></div></div>`; }
+  return `<div class="card coach small" style="display:grid;gap:6px"><div><span class="coach-ic">💬</span> <b>${esc(cu.focus)}</b></div>${cu.avoid ? `<div>⚠️ ${esc(cu.avoid)}</div>` : ''}${rr ? `<div>💪 Вес подбирай так, чтобы оставалось ${esc(rr)}.</div>` : ''}</div>${w}`;
+}
+function restTip(cur) {
+  const nx = sess.set <= cur.it.sets ? cur : sess.plan.items[sess.i];
+  const tips = ['Дыши глубоко: вдох носом на 4 счёта, выдох ртом на 6 — пульс восстановится быстрее.', 'Сделай пару глотков воды.', `Следующий подход: ${COACH.cue(nx.ex).focus}`, 'Не садись в телефон надолго — держи отдых по таймеру, так тренировка даёт результат.'];
+  return tips[(sess.set + sess.i) % tips.length];
+}
+function saveSessLog() {
+  Object.entries(sess.log).forEach(([id, sets]) => { if (!sets.length) return; S.log[id] = (S.log[id] || []).filter(x => x.d !== today()); S.log[id].push({ d:today(), sets }); if (S.log[id].length > 30) S.log[id].shift(); });
+  sess.logSaved = true; save();
+}
 function finishSet() {
   const cur = sess.plan.items[sess.i];
+  if (!cur.it.time && sess.r != null) { (sess.log[cur.ex.id] ||= []).push([COACH.usesWeight(cur.ex) ? +sess.w || 0 : 0, sess.r]); }
   sess.left = 0;
   if (sess.set >= cur.it.sets) {
     const d = day();
@@ -431,9 +510,9 @@ function finishSet() {
     if (maybeCompleteWorkout(sess.plan, { mins:Math.round((Date.now() - sess.startTs) / 60000) })) { sess.phase = 'done'; return renderSession(); }
     const nxt = sess.plan.items.findIndex((x, k) => k > sess.i && !d.done[x.id]);
     if (nxt < 0) { sess.phase = 'done'; return renderSession(); }
-    sess.i = nxt; sess.set = 1;
+    sess.i = nxt; sess.set = 1; sess.w = null; sess.r = null;
   } else sess.set++;
-  sess.phase = 'rest'; sess.left = S.settings.rest; PF.haptic('medium');
+  sess.phase = 'rest'; sess.left = COACH.rest(cur.ex, S.char.goal, S.settings.rest); PF.haptic('medium');
   renderSession();
 }
 function afterRest() { sess.phase = 'work'; sess.left = 0; renderSession(); }
@@ -462,6 +541,7 @@ function vFood() {
       <div class="water">${Array.from({ length:t.glasses }, (_, i) => `<button class="glass ${i < d.water ? 'on' : ''}" data-act="water-set" data-v="${i + 1}" aria-label="${i + 1} стакан"></button>`).join('')}</div></div>
     <div class="section-title"><h2>Дневник</h2></div>
     <div class="card">${d.food.length ? d.food.map((x, i) => `<div class="meal"><b>${esc(x.name)}</b><em>${fmt(x.kcal)} ккал <button class="icon-btn" style="display:inline-grid;width:36px;height:36px;vertical-align:middle;margin-left:4px;background:var(--bg)" data-act="food-del" data-i="${i}" aria-label="Удалить">${IC.trash}</button></em><span>${x.g ? x.g + ' г · ' : ''}Б ${Math.round(x.p)} · Ж ${Math.round(x.f)} · У ${Math.round(x.c)}</span></div>`).join('') : '<div class="muted">Пока пусто. Добавьте первый приём пищи — это +5 XP.</div>'}</div>
+    ${foodCoach(t, e)}
     ${goalCard(t)}`;
   } else if (fSeg === 'guide') {
     body = guideList('food');
@@ -481,6 +561,21 @@ function vFood() {
   return `<section class="screen"><h1>Питание</h1>
     <div class="seg"><button class="${fSeg === 'my' ? 'on' : ''}" data-act="fseg" data-v="my">Мой день</button><button class="${fSeg === 'menu' ? 'on' : ''}" data-act="fseg" data-v="menu">Меню</button><button class="${fSeg === 'guide' ? 'on' : ''}" data-act="fseg" data-v="guide">Гид</button></div>
     ${body}</section>`;
+}
+function foodCoach(t, e) {
+  const h = new Date().getHours(), now = COACH.mealNow(h), M = COACH.meals(t), cur = M.find(m => m.n === now);
+  const lp = Math.max(0, t.p - e.p), lk = t.kcal - e.kcal, fix = COACH.proteinFix(lp, lk), adj = COACH.adjust(S.weights, S.char.goal);
+  const li = [];
+  li.push(`Сейчас ${now.toLowerCase()}: ориентир ~${fmt(cur.k)} ккал и ${cur.p} г белка.`);
+  if (lk < -100) li.push(`Норма превышена на ${fmt(-lk)} ккал. Не страшно — завтра просто вернись к плану, голодать не нужно.`);
+  else if (lp > 15 && fix.length) li.push(`Белка не хватает ${Math.round(lp)} г: ${fix.map(x => `${x.n.toLowerCase()} ${x.g} г`).join(' + ')} — и норма закрыта.`);
+  else if (e.kcal > 0 && lp <= 15) li.push('Белок почти закрыт — отлично, мышцам есть из чего расти.');
+  if (day().workouts.length) li.push('Сегодня была тренировка: углеводы лучше съесть в приём пищи после неё — так быстрее восстановишься.');
+  if (adj) li.push(`По весу за последние недели: ${adj.perWeek > 0 ? '+' : ''}${String(adj.perWeek).replace('.', ',')} кг в неделю. ${adj.msg}`);
+  else li.push('Через 2 недели взвешиваний я сверю темп и подскажу, нужно ли менять калории.');
+  return `<div class="card coach"><div class="row" style="gap:10px;margin-bottom:8px"><span class="coach-ic">💬</span><div><b>Диетолог</b><div class="muted small">разбор вашего дня</div></div></div>
+    <ul class="clean">${li.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:10px">${M.map(m => `<span class="tag ${m.n === now ? 'a' : ''}">${m.n} ~${fmt(m.k)}</span>`).join('')}</div></div>`;
 }
 function openFoodAdd() {
   const sh = openSheet(`<div class="sheet-head"><h2>Добавить еду</h2><button class="icon-btn" data-act="close" aria-label="Закрыть">${IC.close}</button></div>
@@ -876,10 +971,13 @@ const acts = {
   'goal-set': (b) => { S.char.goal = b.dataset.v; if (S.program.id === 'my') S.program.next = 0; mGoal = null; save(); closeAll(); render(); toast('Цель: ' + D.GOALS[b.dataset.v].name); },
   'buy-pro': () => buyPro(),
   's-set': () => finishSet(),
+  's-go': () => { sess.phase = 'work'; renderSession(); },
+  's-w': (b) => { sess.w = Math.max(0, Math.round(((+sess.w || 0) + +b.dataset.v) * 2) / 2); renderSession(); },
+  's-r': (b) => { sess.r = Math.max(0, (sess.r || 0) + +b.dataset.v); renderSession(); },
   's-timer': () => { sess.left = sess.plan.items[sess.i].it.time; PF.haptic('medium'); renderSession(); },
   's-skip': () => afterRest(),
   's-plus': () => { sess.left += 15; const c = $('#clock'); if (c) c.textContent = sess.left; },
-  's-next': () => { const d = day(); const nxt = sess.plan.items.findIndex((x, k) => k > sess.i && !d.done[x.id]); if (nxt < 0) { closeTop(); } else { sess.i = nxt; sess.set = 1; sess.phase = 'work'; sess.left = 0; renderSession(); } },
+  's-next': () => { const d = day(); const nxt = sess.plan.items.findIndex((x, k) => k > sess.i && !d.done[x.id]); if (nxt < 0) { closeTop(); } else { sess.i = nxt; sess.set = 1; sess.w = null; sess.r = null; sess.phase = 'work'; sess.left = 0; renderSession(); } },
 };
 
 document.addEventListener('click', (e) => {

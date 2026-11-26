@@ -196,3 +196,10 @@ textarea.input{min-height:120px;font-family:ui-monospace,monospace;font-size:13p
 .tag.lock{background:var(--surface2);color:var(--muted)}
 .guide{display:grid;gap:10px;line-height:1.55}.guide h3{margin-top:6px}.guide p{margin:0}.guide .card{background:var(--surface)}
 .card>.row.between>h2,.card>.row.between>div{flex:1;min-width:0}.card>.row.between>.tag{flex:none;white-space:nowrap}
+
+.coach{box-shadow:inset 3px 0 0 var(--accent)}
+.coach-ic{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:12px;background:color-mix(in srgb,var(--accent) 18%,transparent);font-size:18px;flex:none}
+.coach ul.clean li{margin:4px 0}
+.stepper{display:inline-flex;align-items:center;gap:12px}
+.stepper button{width:44px;height:44px;border-radius:14px;border:0;background:var(--surface2);color:var(--ink);font:700 22px/1 var(--body);cursor:pointer}
+.stepper b{min-width:72px;text-align:center;font-family:var(--display);font-size:22px}
