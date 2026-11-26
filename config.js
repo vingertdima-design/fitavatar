@@ -2,9 +2,10 @@
 window.FA_CONFIG = {
   // Автор и соцсети
   instagram: 'vingert_dima',            // ваш Instagram без @
-  // Экран «Подпишитесь на Instagram» перед входом. Работает только в Telegram:
-  // в App Store и Google Play требовать подписку на соцсети запрещено правилами магазинов.
-  instagramGate: true,
+  // Доступ в 3 уровня: бесплатно (урезано) → подписчик Instagram (больше) → полный пакет за звёзды (всё).
+  // 'soft' — приложение открыто всем, подписка открывает больше. 'hard' — без подписки не пускает.
+  // В App Store и Google Play требовать подписку на соцсети нельзя — там работает только покупка.
+  instagramGate: 'soft',
   bot: 'fitavatar_app_bot',             // username Telegram-бота без @
 
   // Доступ только подписчикам Telegram-канала — ПРОВЕРЯЕТСЯ по-настоящему при каждом открытии:
@@ -13,14 +14,12 @@ window.FA_CONFIG = {
   // Пока пусто — проверка выключена. Instagram так проверить нельзя: у него нет такой функции.
   channel: '',                          // например 'vingert_dima' (без @)
 
-  // Монетизация: FitAvatar PRO за Telegram Stars
+  // Монетизация: «Полный пакет» навсегда за звёзды Telegram. Звёзды приходят на баланс бота,
+  // вывод — @BotFather → бот → Баланс → Вывод через Fragment (от 1000 ⭐, через 21 день).
   pro: {
     enabled: true,
-    priceStars: 199,                    // цена в звёздах Telegram
-    days: 30,                           // срок доступа после оплаты
-    // Адрес сервера бота (bot/bot.js) с HTTPS, например 'https://fitavatar-bot.onrender.com'.
-    // Пока пусто — оплата идёт через чат с ботом (/pro), а PRO включается после проверки сервером.
-    apiUrl: '',
-    lockedPrograms: ['mass', 'cardio'], // программы только для PRO
+    priceStars: 200,
+    invoiceUrl: 'https://t.me/$maRakOgIQUjMFgAALMedDDzTxjs',   // ссылка на счёт t.me/$..., её выдаёт сервер оплаты (server/Code.gs → setup)
+    apiUrl: 'https://script.google.com/macros/s/AKfycbwBO8g1SzIPOWVS9cCR-JLC3bq_9iZmxHpwk3FOTxt1ipIEWT5y4f__7g_sHr7Lm6kb/exec',     // адрес сервера оплаты (Google Apps Script /exec) — восстанавливает покупку на новом устройстве
   },
 };
