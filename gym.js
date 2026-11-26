@@ -278,5 +278,13 @@
       ['tip','Выбирайте столько дней, сколько точно выдержите месяцами. 3 тренировки стабильно лучше, чем 6 — две недели.'],
       ['src','Schoenfeld et al., 2016–2019 (частота и объём тренировок); позиция NSCA.'],
     ] });
+
+  // Доступ: 0 — бесплатно (2 упражнения), 1 — подписчики, 2 — полный пакет
+  const T1 = new Set(['pullup','row','press','curl','rdl','bench','latpd','bbsquat','deadlift','ohp','goblet','dblunge','lateral','bbcurl','pushdown','neckiso']);
+  D.EX.forEach(x => { x.tier = (x.id === 'squat' || x.id === 'pushup') ? 0 : (x.place !== 'gym' || T1.has(x.id)) ? 1 : 2; });
+  // статьи: бесплатно 2
+  D.GUIDE.forEach(a => { a.tier = (a.id === 't_basics' || a.id === 't_freq') ? 0 : Math.max(1, a.tier ?? 1); });
+  // программы: бесплатно только «Мой план» (упражнения внутри — по своим уровням)
+  D.PROGRAMS.forEach(p => { if (!p.mine && (p.tier ?? 0) < 1) p.tier = 1; });
   D.guideById = Object.fromEntries(D.GUIDE.map(g => [g.id, g]));
 })();

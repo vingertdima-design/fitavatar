@@ -60,6 +60,8 @@ const isOwner = () => { const u = PF.tgUser(); return !!(u && (CFG.ownerIds || [
 const tier = () => (isOwner() || isPro()) ? 2 : (S.igOk ? 1 : 0);
 const TIER_NAME = ['Бесплатный доступ', 'Подписчик', 'Полный пакет'];
 const progTier = (id) => (D.progById[id]?.tier ?? 0);
+const exTier = (x) => (x && x.tier) ?? 1;
+const exLocked = (x) => PRO.enabled !== false && exTier(x) > tier();
 const isLocked = (progId) => PRO.enabled !== false && progTier(progId) > tier();
 const lockTag = (t) => t >= 2 ? '<span class="tag pro">⭐ Полный пакет</span>' : '<span class="tag lock">Для подписчиков</span>';
 const igUrl = () => 'https://www.instagram.com/' + encodeURIComponent(CFG.instagram || '');
@@ -274,7 +276,7 @@ function vHome() {
   <div class="rings">
     <button class="ring" data-act="steps">${ring(d.steps / S.settings.stepGoal, '#ff4d2e')}<b>${fmt(d.steps)}</b><span>шагов</span></button>
     <button class="ring" data-act="water-add">${ring(d.water / t.glasses, '#3b6cff')}<b>${d.water}/${t.glasses}</b><span>воды +1</span></button>
-    <button class="ring" data-act="tab" data-tab="food">${ring(e.kcal / t.kcal, '#f5b301')}<b>${fmt(e.kcal)}</b><span>из ${fmt(t.kcal)} ккал</span></button>
+    ${tier() < 1 ? `<button class="ring" data-act="pro">${ring(0, '#f5b301')}<b>🔒</b><span>калории</span></button>` : `<button class="ring" data-act="tab" data-tab="food">${ring(e.kcal / t.kcal, '#f5b301')}<b>${fmt(e.kcal)}</b><span>из ${fmt(t.kcal)} ккал</span></button>`}
   </div>
   <div class="card" style="display:grid;gap:12px">
     <div class="row between"><div><h2>${esc(plan.pd.name)}</h2><div class="muted small">${esc(plan.prog.name)} · ${exDone}/${plan.items.length} выполнено${wDone ? ' · засчитано' : ''}</div></div></div>
@@ -340,7 +342,7 @@ function myPlanCard() {
     <div class="row" style="gap:8px"><button class="btn sm ghost" data-act="prog" data-id="my">Упражнения плана</button>${on ? '' : `<button class="btn sm" data-act="plan-use">Тренироваться по плану</button>`}</div>
   </div>`;
 }
-const exRow = (x) => `<button class="exrow" data-act="ex" data-id="${x.id}"><span class="exthumb" data-anim="${x.anim}"></span><span style="flex:1;min-width:0"><b>${esc(x.name)}</b><br><span class="muted small">${typeName[x.type]} · ${esc(x.muscles.join(', '))}</span></span>${IC.chev.replace('<svg', '<svg width="20" height="20"')}</button>`;
+const exRow = (x) => `<button class="exrow" data-act="ex" data-id="${x.id}"><span class="exthumb" data-anim="${x.anim}"></span><span style="flex:1;min-width:0"><b>${esc(x.name)}</b><br><span class="muted small">${typeName[x.type]} · ${esc(x.muscles.join(', '))}</span></span>${exLocked(x) ? lockTag(exTier(x)) : IC.chev.replace('<svg', '<svg width="20" height="20"')}</button>`;
 
 function openProgram(id) {
   const p = D.progById[id];
@@ -354,7 +356,7 @@ function openProgram(id) {
 let stopDemo = null;
 function openExercise(id) {
   const x = D.exById[id];
-  if (x.place === 'gym' && tier() < 1) return openPro('Техника упражнений с инвентарём и в зале открывается для подписчиков.');
+  if (exLocked(x)) return openPro(exTier(x) >= 2 && tier() >= 1 ? `«${x.name}» — в полном пакете.` : `Бесплатно открыты 2 упражнения. «${x.name}» и вся техника — после подписки или в полном пакете.`);
   const sh = openSheet(`<div class="sheet-head"><div><h2>${esc(x.name)}</h2><div class="tags" style="margin-top:6px"><span class="tag a">${typeName[x.type]}</span>${x.muscles.map(m => `<span class="tag">${esc(m)}</span>`).join('')}<span class="tag">${x.place === 'gym' ? 'Зал / инвентарь' : 'Без инвентаря'}</span></div></div><button class="icon-btn" data-act="close" aria-label="Закрыть">${IC.close}</button></div>
     <div class="demo" id="demo"></div>
     <div><h3 style="margin-bottom:8px">Как выполнять</h3><ol class="steps">${x.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
@@ -443,7 +445,13 @@ function vFood() {
   const mg = mGoal || (D.MEALS[c.goal] ? c.goal : 'fit');
   const macro = (cl, n, v, max) => `<div class="macro ${cl}"><div class="row"><span>${n}</span><b>${Math.round(v)} / ${max} г</b></div>${bar(v / max)}</div>`;
   let body = '';
-  if (fSeg === 'my') {
+  if (fSeg === 'my' && tier() < 1) {
+    body = `<div class="card" style="display:grid;gap:12px;text-align:center"><div style="font-size:44px">🔒</div><h2>Счётчик калорий и КБЖУ</h2>
+      <div class="muted small">Норма калорий под вашу цель, белки, жиры, углеводы и дневник питания открываются после подписки или в полном пакете.</div>
+      <button class="btn" data-act="pro">${IC.crown}Открыть счётчик</button></div>
+    <div class="card"><div class="row between" style="margin-bottom:10px"><h3>Вода</h3><span class="muted small">${d.water * 250} / ${t.glasses * 250} мл</span></div>
+      <div class="water">${Array.from({ length:t.glasses }, (_, i) => `<button class="glass ${i < d.water ? 'on' : ''}" data-act="water-set" data-v="${i + 1}" aria-label="${i + 1} стакан"></button>`).join('')}</div></div>`;
+  } else if (fSeg === 'my') {
     const left = t.kcal - e.kcal;
     body = `<div class="card" style="display:grid;gap:14px">
       <div class="row between"><div><div class="muted small">Съедено сегодня</div><div class="kcal-big">${fmt(e.kcal)}</div></div><div style="text-align:right"><div class="muted small">${left >= 0 ? 'Осталось' : 'Перебор'}</div><b style="font-family:var(--display);font-size:22px;color:${left >= 0 ? 'var(--ink)' : 'var(--accent)'}">${fmt(Math.abs(left))} ккал</b></div></div>
@@ -458,11 +466,11 @@ function vFood() {
   } else if (fSeg === 'guide') {
     body = guideList('food');
   } else {
-    const M = D.MEALS[mg], mt = mealTier(mg), full = tier() >= mt, days = full ? M.days : M.days.slice(0, mt >= 2 ? 0 : 1);
+    const M = D.MEALS[mg], mt = mealTier(mg), full = tier() >= mt, days = full ? M.days : [];
     const md = days.length ? days[planDay % days.length] : null;
     const chips = `<div class="chips">${D.GOAL_ORDER.map(k => `<button class="chip ${k === mg ? 'on' : ''}" data-act="mgoal" data-v="${k}">${esc(D.MEALS[k].title)}${mealTier(k) >= 2 && tier() < 2 ? ' 🔒' : ''}</button>`).join('')}</div>`;
     if (!md) { body = chips + `<div class="card" style="display:grid;gap:10px"><div class="row between"><h2>${M.title}</h2><span class="tag a">${M.kcal}</span></div><ul class="clean">${M.rules.slice(0, 2).map(r => `<li>${esc(r)}</li>`).join('')}</ul>
-        <div class="muted small">Полное меню на 3 дня, правила и списки продуктов для этой цели — в полном пакете.</div><button class="btn" data-act="pro">${IC.crown}Открыть меню</button></div>`; }
+        <div class="muted small">${mt >= 2 ? 'Меню на 3 дня для этой цели — в полном пакете.' : 'Меню на 3 дня открывается после подписки или в полном пакете.'}</div><button class="btn" data-act="pro">${IC.crown}Открыть меню</button></div>`; }
     else body = chips + `<div class="card" style="display:grid;gap:8px"><div class="row between"><h2>${M.title}</h2><span class="tag a">${M.kcal}</span></div><ul class="clean">${M.rules.map(r => `<li>${esc(r)}</li>`).join('')}</ul></div>
       <div class="chips">${M.days.map((x, i) => `<button class="chip ${i === planDay % days.length && i < days.length ? 'on' : ''}" data-act="${i < days.length ? 'pday' : 'pro'}" data-v="${i}">${esc(x.name)}${i < days.length ? '' : ' 🔒'}</button>`).join('')}</div>
       <div class="card">${md.meals.map(([n, txt, k]) => `<div class="meal"><b>${esc(n)}</b><em>${k} ккал</em><span>${esc(txt)}</span></div>`).join('')}
@@ -574,10 +582,10 @@ function igCard() {
 }
 /* ---------- Доступ: бесплатно / подписчик / полный пакет ---------- */
 const PERKS = {
-  1: ['Ещё 3 программы: жиросжигание, сила без зала, кардио', 'Меню на 3 дня для похудения, формы и набора мышц', 'Статьи тренера и диетолога: белок, похудение, набор, кардио', 'Техника всех упражнений в зале'],
-  2: ['Все программы: верх/низ, сушка, бикини, набор для худых, масса в зале', 'Меню для сушки и набора массы для худых', 'Все статьи: сушка и сухая форма, добавки, контроль прогресса, восстановление', 'Все будущие программы и функции'],
+  1: ['Счётчик калорий и КБЖУ под вашу цель', 'Техника всех упражнений дома и базовых в зале', 'Программы: старт с нуля, жиросжигание, сила без зала, кардио, гибкость', 'Меню для похудения, формы и набора мышц', 'Ещё 10 статей тренера и диетолога'],
+  2: ['Все 65 упражнений с техникой — каждая мышца, включая шею', 'Все программы: верх/низ, сушка, бикини, набор для худых, масса в зале', 'Счётчик калорий и все меню, включая сушку и массу', 'Все статьи тренера и диетолога', 'Все будущие программы и функции'],
 };
-const proBanner = () => `<button class="card pro-banner" data-act="pro"><span class="pro-ic">${IC.crown}</span><span style="flex:1;text-align:left"><b>${tier() ? 'Открыть всё — полный пакет' : 'Открыть больше функций'}</b><br><span class="small">${tier() ? `Сушка, программы в зале и все статьи · ${PRO.priceStars} ⭐` : 'Бесплатно за подписку в Instagram или всё сразу за звёзды'}</span></span>${IC.chev.replace('<svg', '<svg width="20" height="20"')}</button>`;
+const proBanner = () => `<button class="card pro-banner" data-act="pro"><span class="pro-ic">${IC.crown}</span><span style="flex:1;text-align:left"><b>${tier() ? 'Открыть всё — полный пакет' : 'Открыть больше функций'}</b><br><span class="small">${tier() ? `Сушка, программы в зале и все статьи · ${PRO.priceStars} ⭐` : '2 упражнения и 2 статьи бесплатно · всё — за 200 ⭐'}</span></span>${IC.chev.replace('<svg', '<svg width="20" height="20"')}</button>`;
 function proCard() {
   const t = tier();
   return `<div class="card" style="display:grid;gap:12px"><div class="row"><span class="pro-ic">${IC.crown}</span><div style="flex:1"><h3>Доступ: ${TIER_NAME[t]}</h3><div class="muted small">${t >= 2 ? 'Открыто всё. Спасибо за поддержку!' : t === 1 ? `Полный пакет — ${PRO.priceStars} ⭐ навсегда` : 'Часть функций закрыта'}</div></div></div>
@@ -588,13 +596,13 @@ function openPro(reason) {
   const list = (arr) => `<ul class="clean">${arr.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
   openSheet(`<div class="sheet-head"><div><h2>${t >= 2 ? 'Всё открыто' : 'Открыть больше'}</h2><div class="muted small">Сейчас: ${TIER_NAME[t]}</div></div><button class="icon-btn" data-act="close" aria-label="Закрыть">${IC.close}</button></div>
     ${reason ? `<div class="card small">${esc(reason)}</div>` : ''}
-    ${t < 1 && CFG.instagram ? `<div class="card" style="display:grid;gap:10px"><div class="row"><span class="ig-ic">${IC.insta}</span><div style="flex:1"><h3>Подписка на Instagram — бесплатно</h3><div class="muted small">@${esc(CFG.instagram)} · тренировки и питание каждый день</div></div></div>
-      ${list(PERKS[1])}
-      <div class="grid2"><button class="btn" data-act="ig-gate">Подписаться</button><button class="btn ${S.igClicked ? 'dark' : 'ghost'}" data-act="ig-ok" ${S.igClicked ? '' : 'disabled style="opacity:.5"'}>Я подписался</button></div></div>` : ''}
-    ${t < 2 ? `<div class="card" style="display:grid;gap:10px;box-shadow:inset 0 0 0 2px var(--gold)"><div class="row"><span class="pro-ic">${IC.crown}</span><div style="flex:1"><h3>Полный пакет — ${PRO.priceStars} ⭐</h3><div class="muted small">Один раз и навсегда. Всё, что есть у подписчиков, плюс:</div></div></div>
+    ${t < 2 ? `<div class="card" style="display:grid;gap:10px;box-shadow:inset 0 0 0 2px var(--gold)"><div class="row"><span class="pro-ic">${IC.crown}</span><div style="flex:1"><h3>Полный пакет — ${PRO.priceStars} ⭐</h3><div class="muted small">Один раз и навсегда — открывается всё:</div></div></div>
       ${list(PERKS[2])}
       <button class="btn" data-act="buy-pro">${IC.star}Купить за ${PRO.priceStars} ⭐</button>
-      <div class="muted small">Нет Instagram? Полный пакет открывает всё сразу. Оплата звёздами Telegram, вопросы — /paysupport в боте @${esc(CFG.bot || '')}.</div></div>` : `<div class="card">${list(PERKS[2])}</div><button class="btn ghost" data-act="ig-dm">Написать автору</button>`}`);
+      <div class="muted small">Нет Instagram? Полный пакет открывает всё сразу. Оплата звёздами Telegram, вопросы — /paysupport в боте @${esc(CFG.bot || '')}.</div></div>` : `<div class="card">${list(PERKS[2])}</div><button class="btn ghost" data-act="ig-dm">Написать автору</button>`}
+    ${t < 1 && CFG.instagram ? `<div class="card" style="display:grid;gap:10px"><div class="row"><span class="ig-ic">${IC.insta}</span><div style="flex:1"><h3>Подписка на Instagram — бесплатно</h3><div class="muted small">@${esc(CFG.instagram)} · тренировки и питание каждый день</div></div></div>
+      ${list(PERKS[1])}
+      <div class="grid2"><button class="btn" data-act="ig-gate">Подписаться</button><button class="btn ${S.igClicked ? 'dark' : 'ghost'}" data-act="ig-ok" ${S.igClicked ? '' : 'disabled style="opacity:.5"'}>Я подписался</button></div></div>` : ''}`);
 }
 const apiUrl = () => String(PRO.apiUrl || '').replace(/\/$/, '');
 async function checkPro(silent = true) {
@@ -864,7 +872,7 @@ const acts = {
   pro: () => openPro(),
   guide: (b) => openGuide(b.dataset.id),
   mgoal: (b) => { mGoal = b.dataset.v; planDay = 0; render(); },
-  'goal-pick': () => openGoalPick(),
+  'goal-pick': () => tier() < 1 ? openPro('Расчёт калорий под цель открывается после подписки или в полном пакете.') : openGoalPick(),
   'goal-set': (b) => { S.char.goal = b.dataset.v; if (S.program.id === 'my') S.program.next = 0; mGoal = null; save(); closeAll(); render(); toast('Цель: ' + D.GOALS[b.dataset.v].name); },
   'buy-pro': () => buyPro(),
   's-set': () => finishSet(),
