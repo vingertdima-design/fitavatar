@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><title>FitAvatar — демо-профиль</title><meta name="robots" content="noindex"></head><body>
+<script>
+// Служебная страница для промо: ставит демо-профиль (или очищает) и открывает приложение.
+// ?s=<base64 JSON состояния> | ?clear=1 ; &to=<вкладка>
+(function () {
+  var p = new URLSearchParams(location.search);
+  try {
+    if (p.get('clear')) localStorage.removeItem('fitavatar.v1');
+    if (p.get('s')) localStorage.setItem('fitavatar.v1', decodeURIComponent(escape(atob(p.get('s')))));
+  } catch (e) {}
+  location.replace('./?demo=' + Date.now() + (p.get('to') ? '#' + p.get('to') : ''));
+})();
+</script></body></html>

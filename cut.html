@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><title>FitAvatar — кадры для промо</title>
+<meta name="robots" content="noindex">
+<style>html,body{margin:0;background:#00ff00;overflow:hidden}#g{display:flex;gap:0;align-items:flex-end}#g img{display:block;opacity:1!important}</style>
+</head><body><div id="g"></div>
+<script src="forms.js"></script>
+<script>
+// Служебная страница для промо-роликов: собирает персонажей на зелёном фоне.
+// ?q=[{"g":"m","st":"fit","h":"a","hc":0,"eye":"1","w":{"t":"tee"},"face":0}, ...]&bg=00ff00
+(function () {
+  var p = new URLSearchParams(location.search), q = [];
+  try { q = JSON.parse(p.get('q') || '[]'); } catch (e) {}
+  if (p.get('bg')) document.body.style.background = '#' + p.get('bg');
+  window.Avatar = { render: function () { return ''; } };
+  var box = document.getElementById('g');
+  q.forEach(function (o) {
+    var c = { gender: o.g, look: { h: o.h || 'a', hc: o.hc || 0, eye: o.eye || '1' } };
+    var w = Object.assign({ t: '', b: '', s: '', a: '' }, o.w || {});
+    box.insertAdjacentHTML('beforeend', o.face ? LOOK.face(c) : LOOK.img(c, o.st || 'fit', w));
+  });
+  LOOK.hydrate();
+})();
+</script></body></html>
