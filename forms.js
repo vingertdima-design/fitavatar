@@ -96,9 +96,9 @@
     var d = ctx.getImageData(0, 0, w, h), p = d.data;
     for (var i = 0; i < p.length; i += 4) {
       if (!p[i + 3]) continue;
-      var r = p[i], gr = p[i + 1], b = p[i + 2], k = b - Math.max(r, gr);
-      if (k < 18) continue;
-      var wgt = Math.min(1, (k - 18) / 50);
+      var r = p[i], gr = p[i + 1], b = p[i + 2], k = b - Math.max(r, gr), edge = p[i + 3] < 250, k0 = edge ? 4 : 18;
+      if (k < k0) continue;
+      var wgt = Math.min(1, (k - k0) / (edge ? 24 : 50));
       var L = Math.min(1, (0.3 * r + 0.4 * gr + 0.3 * b + b * 0.25) / 150), t = Math.pow(L, 1.1);
       for (var j = 0; j < 3; j++) { var v = dk[j] + (lt[j] - dk[j]) * t; p[i + j] = Math.round(p[i + j] * (1 - wgt) + v * wgt); }
     }
