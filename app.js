@@ -891,12 +891,14 @@ function drawWardrobe() {
     <div class="wr-grid">${items.map(it => { const w = Object.assign({}, wear, { [it.slot]: it.base ? '' : it.id });
       return `<div class="wr-item ${worn(it) ? 'on' : ''}"><div class="wr-pic">${LOOK.img(c, st, w)}</div><b>${esc(it.name)}</b>
         ${worn(it) ? '<span class="tag">Надето</span>' : own(it) ? `<button class="btn sm" data-act="wr-wear" data-v="${it.id}">Надеть</button>`
+          : isOwner() ? `<button class="btn sm" data-act="wr-buy" data-v="${it.id}">Взять бесплатно</button>`
           : `<button class="btn sm ${(S.coins || 0) < it.price ? 'ghost' : ''}" data-act="wr-buy" data-v="${it.id}">🪙 ${it.price}</button>`}</div>`; }).join('')}</div>`;
 }
 function wrBuy(id) {
   const gg = S.char.gender === 'f' ? 'f' : 'm', it = LOOK.itemById(gg, id); if (!it) return;
-  if ((S.coins || 0) < it.price) { toast(`Нужно ещё ${it.price - (S.coins || 0)} монет — выполняйте задания и тренировки`); PF.haptic('warning'); return; }
-  S.coins -= it.price; S.wardrobe.own.push(gg + ':' + id); wrWear(id, true); PF.haptic('success'); toast(`${it.name} — ваша! Уже надета.`);
+  const price = isOwner() ? 0 : it.price;
+  if ((S.coins || 0) < price) { toast(`Нужно ещё ${it.price - (S.coins || 0)} монет — выполняйте задания и тренировки`); PF.haptic('warning'); return; }
+  S.coins -= price; S.wardrobe.own.push(gg + ':' + id); wrWear(id, true); PF.haptic('success'); toast(`${it.name} — ваша! Уже надета.`);
 }
 function wrWear(id, quiet) {
   const gg = S.char.gender === 'f' ? 'f' : 'm', it = LOOK.itemById(gg, id); if (!it) return;
@@ -933,7 +935,7 @@ function openExport() {
 function openImport() {
   const sh = openSheet(`<div class="sheet-head"><h2>Восстановить</h2><button class="icon-btn" data-act="close" aria-label="Закрыть">${IC.close}</button></div>
     <textarea class="input" id="im" placeholder="Вставьте сохранённую копию"></textarea><button class="btn" id="ib">Восстановить</button>`);
-  $('#ib', sh).addEventListener('click', () => { try { const v = JSON.parse($('#im', sh).value); if (!v.char) throw 0; S = Object.assign(defaults(), v); save(); closeAll(); render(); toast('Данные восстановлены'); } catch (e) { toast('Не удалось прочитать данные'); } });
+  $('#ib', sh).addEventListener('click', () => { try { const v = JSON.parse($('#im', sh).value); if (!v.char) throw 0; S = Object.assign(defaults(), v); migrateLook(); save(); closeAll(); render(); toast('Данные восстановлены'); } catch (e) { toast('Не удалось прочитать данные'); } });
 }
 
 /* ======================= РЕНДЕР И СОБЫТИЯ ======================= */
@@ -1006,7 +1008,7 @@ const acts = {
   },
   export: () => openExport(),
   import: () => openImport(),
-  reset: () => confirmBox('Удалить персонажа и весь прогресс?', 'Удалить', () => { PF.store.clear(); S = defaults(); save(); closeAll(); render(); }),
+  reset: () => confirmBox('Удалить персонажа и весь прогресс?', 'Удалить', () => { PF.store.clear(); S = defaults(); migrateLook(); save(); closeAll(); render(); }),
   share: () => share(),
   ig: () => PF.openLink(igUrl()),
   'ig-gate': () => { PF.openLink(igUrl()); S.igClicked = true; save(); setTimeout(render, 800); },
@@ -1065,7 +1067,7 @@ render();
 syncAutoHabits();
 // облако Telegram: берём более свежую версию
 checkPro();
-PF.store.loadCloud().then(v => { if (v && v.char && (!S.char || (v.ts || 0) > (S.ts || 0) + 5000)) { S = Object.assign(defaults(), v); PF.store.save(S); closeAll(); render(); } });
+PF.store.loadCloud().then(v => { if (v && v.char && (!S.char || (v.ts || 0) > (S.ts || 0) + 5000)) { S = Object.assign(defaults(), v); migrateLook(); PF.store.save(S); closeAll(); render(); } });
 if (S.settings.health) syncHealth(true);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { if (S.settings.health) syncHealth(true); if (S.char) render(); } });
 }

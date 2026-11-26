@@ -176,7 +176,7 @@
   css.textContent =
     '.fa-img{opacity:0;transition:opacity .25s}.fa-img.on{opacity:1}' +
     '.fa-form{position:relative;width:100%;height:310px;-webkit-tap-highlight-color:transparent}' +
-    '.fa-form>.fa-img{position:absolute;left:50%;bottom:0;height:100%;width:auto;max-width:none;transform:translateX(-50%) scale(1.16);transform-origin:50% 96%;filter:drop-shadow(0 10px 18px rgba(0,0,0,.5));pointer-events:none}' +
+    '.fa-form>.fa-img{position:absolute;left:50%;bottom:0;height:calc(100% - 24px);width:auto;max-width:none;transform:translateX(-50%) scale(1.06);transform-origin:50% 100%;filter:drop-shadow(0 10px 18px rgba(0,0,0,.5));pointer-events:none}' +
     '.fa-chip{position:absolute;left:50%;top:0;transform:translateX(-50%);z-index:2;white-space:nowrap;font:600 12px/1 var(--body);color:#fff;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(6px);padding:6px 10px;border-radius:99px}' +
     '.gymbg{background:linear-gradient(180deg,rgba(11,12,15,.15),rgba(11,12,15,.55) 70%,rgba(11,12,15,.9)),url(gym.webp) center 30%/cover,#15161b!important}' +
     '.arena.gymbg::after{display:none}' +
