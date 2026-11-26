@@ -84,7 +84,7 @@ const statLevel = (v) => Math.min(100, Math.round(Math.sqrt(v) * 6));
 function addXP(n, stats = {}) {
   const before = levelInfo().lvl;
   S.xp = Math.max(0, S.xp + n);
-  if (n > 0) S.coins = (S.coins || 0) + n;
+  S.coins = Math.max(0, (S.coins || 0) + n);
   day().xp += n;
   for (const k in stats) S.stats[k] = Math.max(0, (S.stats[k] || 0) + stats[k]);
   S.lastActive = today();
@@ -763,7 +763,7 @@ function vProfile() {
     <div class="arena gymbg" style="min-height:260px"><div class="stage">${avatarSVG()}</div>
       <div class="info"><h2 style="color:#fff">${esc(c.name || 'Атлет')}${isPro() ? ' <span class="tag pro">⭐ Полный</span>' : ''}</h2><div style="color:#d4d6de;font-size:14px">${c.gender === 'f' ? 'Женский' : 'Мужской'} · ${c.age} ${plural(c.age,'год','года','лет')}<br>${c.height} см · ${curWeight()} кг</div><span class="rank">Ур. ${L.lvl} · ${L.rank}</span>
       <button class="btn sm" data-act="creator" style="width:100%">${IC.edit}Изменить персонажа</button><button class="btn sm ghost" data-act="wardrobe" style="width:100%;color:#fff">${IC.shirt}Гардероб · 🪙 ${fmt(S.coins || 0)}</button></div></div>
-    <div class="card" style="display:grid;gap:12px"><div class="row">${IC.phone}<div style="flex:1"><h3>Активность телефона</h3><div class="muted small">${H.nativeAvailable ? (S.settings.health ? `Подключено: ${H.label}` : `Синхронизация шагов, калорий и веса с ${H.label}`) : 'В Telegram шаги считает датчик телефона, пока приложение открыто. Полная синхронизация с Apple Health и Google Health Connect — в версии из App Store и Google Play.'}</div></div></div>
+    <div class="card" style="display:grid;gap:12px"><div class="row">${IC.phone}<div style="flex:1"><h3>Активность телефона</h3><div class="muted small">${H.nativeAvailable ? (S.settings.health ? `Подключено: ${H.label}` : `Синхронизация шагов, калорий и веса с ${H.label}`) : 'В Telegram шаги считает датчик телефона, пока приложение открыто. Можно ввести шаги вручную из приложения «Здоровье» или браслета.'}</div></div></div>
       ${H.nativeAvailable ? `<button class="btn ${S.settings.health ? 'ghost' : ''}" data-act="health">${S.settings.health ? 'Обновить данные' : 'Подключить ' + H.label}</button>`
         : `<div class="grid2"><button class="btn ghost" data-act="pedo">${PF.Pedometer.running ? 'Шагомер включён' : 'Включить шагомер'}</button><button class="btn ghost" data-act="steps">Ввести шаги</button></div>`}
       <div class="field"><span class="lab">Цель по шагам</span><div class="range"><input type="range" min="3000" max="20000" step="500" value="${S.settings.stepGoal}" data-set="stepGoal" aria-label="Цель по шагам"><output>${fmt(S.settings.stepGoal)}</output></div></div></div>
@@ -1041,7 +1041,9 @@ document.addEventListener('click', (e) => {
     if (c.dataset.num) v = +v;
     if (k === 'lh' || k === 'lhc' || k === 'leye') draft.look = Object.assign({}, draft.look, { [{ lh:'h', lhc:'hc', leye:'eye' }[k]]: v });
     else draft[k] = v;
-    if (k === 'gender') draft.look = { h:'a', hc:v === 'f' ? 1 : 0, eye:draft.look?.eye || '1' };
+    if (k === 'gender') { draft.look = { h:'a', hc:v === 'f' ? 1 : 0, eye:draft.look?.eye || '1' };
+      if (v === 'f' && draft.height === 175 && draft.weight === 75) { draft.height = 165; draft.weight = 60; }
+      if (v === 'm' && draft.height === 165 && draft.weight === 60) { draft.height = 175; draft.weight = 75; } }
     PF.haptic('light'); drawCreator(!S.char); return;
   }
   const n = e.target.closest('[data-cnav]');

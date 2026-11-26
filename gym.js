@@ -255,7 +255,7 @@
       if (cutting && k !== 'hiit') items.push({ ex: i % 2 ? 'rope' : 'climber', sets:3, time:45 });
       return { name: NAMES[k] || k, items };
     });
-    const g = { lose:'похудение', cut:'сушку', gain:'набор мышц', bulk:'набор массы', fit:'форму' }[goal] || 'форму';
+    const g = { lose:'похудение', cut:'сушка', gain:'набор мышц', bulk:'набор массы', fit:'форма' }[goal] || 'форма';
     return { id:'my', name:`Мой план: ${days} ${days < 5 ? 'тренировки' : 'тренировок'} в неделю`, goal, place, level:'Под вас', weeks:8, tier:0, mine:true,
       desc:`${place === 'gym' ? 'Зал' : 'Дома'} · ${SPLIT_NAME[days]} · цель — ${g}. Каждая мышца получает нагрузку минимум 2 раза в неделю. Добавляйте вес или повтор, когда все подходы выполнены чисто.`,
       days:list };
