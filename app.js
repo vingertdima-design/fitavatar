@@ -12,6 +12,7 @@ const plural = (n, a, b, c) => { const m = n % 10, h = n % 100; return m === 1 &
 /* ---------- Иконки ---------- */
 const I = (d, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${d}</svg>`;
 const IC = {
+  shirt: I('<path d="M8 3 4 6l2 4 2-1v12h8V9l2 1 2-4-4-3c-.5 1.5-2 2.5-4 2.5S8.5 4.5 8 3z"/>'),
   home: I('<path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>'),
   dumbbell: I('<path d="M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12"/>'),
   apple: I('<path d="M12 7c-1-3 1-4 3-4M12 7C9 5 4 6 4 12c0 5 3 9 5 9 1.5 0 2-.7 3-.7s1.5.7 3 .7c2 0 5-4 5-9 0-6-5-7-8-5z"/>'),
@@ -46,10 +47,13 @@ const IC = {
 const blankDay = () => ({ done:{}, water:0, steps:0, stepsXp:0, food:[], workouts:[], xp:0 });
 const defaults = () => ({
   v:1, ts:Date.now(), char:null, fit:{ muscleGain:0, fatLoss:0 }, xp:0, stats:{ str:0, end:0, flex:0, disc:0 },
-  days:{}, tasks:[], weights:[], log:{}, program:{ id:'start', next:0 }, ach:{},
+  days:{}, tasks:[], weights:[], log:{}, program:{ id:'start', next:0 }, ach:{}, wardrobe:{ own:[], wear:{ m:{}, f:{} } },
   settings:{ stepGoal:8000, rest:45, remind:false, remindAt:'19:00', health:false }, lastActive:null, tab:'home',
 });
 let S = Object.assign(defaults(), PF.store.load() || {});
+function migrateLook() { if (S.coins == null) S.coins = Math.round((S.xp || 0) / 2); S.wardrobe ||= { own:[], wear:{ m:{}, f:{} } }; S.wardrobe.own ||= []; S.wardrobe.wear ||= { m:{}, f:{} }; S.wardrobe.wear.m ||= {}; S.wardrobe.wear.f ||= {};
+  if (S.char && !S.char.look) S.char.look = { h:'a', hc:S.char.gender === 'f' ? 1 : 0, eye:'1' }; if (S.char && !['slim','average','athletic','shredded'].includes(S.char.body)) S.char.body = 'average'; }
+migrateLook(); window.LOOK && (LOOK.wardrobe = () => S.wardrobe);
 const save = () => { S.ts = Date.now(); PF.store.save(S); };
 const day = (k = today()) => (S.days[k] ||= blankDay());
 const curWeight = () => (S.weights.length ? S.weights[S.weights.length - 1].w : S.char?.weight) || 70;
@@ -80,6 +84,7 @@ const statLevel = (v) => Math.min(100, Math.round(Math.sqrt(v) * 6));
 function addXP(n, stats = {}) {
   const before = levelInfo().lvl;
   S.xp = Math.max(0, S.xp + n);
+  if (n > 0) S.coins = (S.coins || 0) + n;
   day().xp += n;
   for (const k in stats) S.stats[k] = Math.max(0, (S.stats[k] || 0) + stats[k]);
   S.lastActive = today();
@@ -261,9 +266,9 @@ function vHome() {
   const exDone = plan.items.filter(x => d.done[x.id]).length;
   return `<section class="screen">
   <div class="top"><div><div class="hello">${greet()}, ${esc(c.name || 'атлет')}</div><h1>Сегодня</h1></div>
-    <div class="row"><span class="pill" title="Серия дней">${IC.flame}${st}</span></div></div>
-  <div class="arena">
-    <div class="stage">${avatarSVG({ glow:true })}</div>
+    <div class="row"><button class="pill coin" data-act="wardrobe" title="Монеты">🪙 ${fmt(S.coins || 0)}</button><span class="pill" title="Серия дней">${IC.flame}${st}</span></div></div>
+  <div class="arena gymbg">
+    <div class="stage">${avatarSVG({ glow:true })}<button class="wr-btn" data-act="wardrobe">${IC.shirt}Гардероб</button></div>
     <div class="info">
       <div class="lvl"><small>Уровень</small>${L.lvl}</div>
       <span class="rank">${L.rank}</span>
@@ -755,9 +760,9 @@ function vProfile() {
   const c = S.char, L = levelInfo(), H = PF.Health;
   const where = PF.isNative ? (PF.os === 'ios' ? 'iOS' : 'Android') : PF.inTG ? 'Telegram' : 'браузер';
   return `<section class="screen"><h1>Профиль</h1>
-    <div class="arena" style="min-height:260px"><div class="stage">${avatarSVG()}</div>
+    <div class="arena gymbg" style="min-height:260px"><div class="stage">${avatarSVG()}</div>
       <div class="info"><h2 style="color:#fff">${esc(c.name || 'Атлет')}${isPro() ? ' <span class="tag pro">⭐ Полный</span>' : ''}</h2><div style="color:#d4d6de;font-size:14px">${c.gender === 'f' ? 'Женский' : 'Мужской'} · ${c.age} ${plural(c.age,'год','года','лет')}<br>${c.height} см · ${curWeight()} кг</div><span class="rank">Ур. ${L.lvl} · ${L.rank}</span>
-      <button class="btn sm" data-act="creator" style="width:100%">${IC.edit}Изменить персонажа</button></div></div>
+      <button class="btn sm" data-act="creator" style="width:100%">${IC.edit}Изменить персонажа</button><button class="btn sm ghost" data-act="wardrobe" style="width:100%;color:#fff">${IC.shirt}Гардероб · 🪙 ${fmt(S.coins || 0)}</button></div></div>
     <div class="card" style="display:grid;gap:12px"><div class="row">${IC.phone}<div style="flex:1"><h3>Активность телефона</h3><div class="muted small">${H.nativeAvailable ? (S.settings.health ? `Подключено: ${H.label}` : `Синхронизация шагов, калорий и веса с ${H.label}`) : 'В Telegram шаги считает датчик телефона, пока приложение открыто. Полная синхронизация с Apple Health и Google Health Connect — в версии из App Store и Google Play.'}</div></div></div>
       ${H.nativeAvailable ? `<button class="btn ${S.settings.health ? 'ghost' : ''}" data-act="health">${S.settings.health ? 'Обновить данные' : 'Подключить ' + H.label}</button>`
         : `<div class="grid2"><button class="btn ghost" data-act="pedo">${PF.Pedometer.running ? 'Шагомер включён' : 'Включить шагомер'}</button><button class="btn ghost" data-act="steps">Ввести шаги</button></div>`}
@@ -796,35 +801,41 @@ async function syncHealth(silent) {
 
 /* ---------- Конструктор персонажа ---------- */
 let draft = null, cStep = 0;
-const C_STEPS = ['Кто вы', 'Лицо', 'Волосы', 'Тело', 'Цель'];
+const C_STEPS = ['Кто вы', 'Внешность', 'Тело', 'Цель'];
 function openCreator(isNew) {
   const u = PF.tgUser();
-  draft = Object.assign({ name:u?.first_name || '', gender:'m', age:25, height:175, weight:75, skin:2, head:'oval', hair:'short', hairColor:1, eyes:0, beard:'none', glasses:false, body:'average', outfit:0, goal:'fit', activity:1.375, place:'home', days:3, target:'' }, S.char || {});
+  draft = Object.assign({ name:u?.first_name || '', gender:'m', age:25, height:175, weight:75, body:'average', look:{ h:'a', hc:0, eye:'1' }, goal:'fit', activity:1.375, place:'home', days:3, target:'' }, S.char || {});
+  draft.look = Object.assign({ h:'a', hc:draft.gender === 'f' ? 1 : 0, eye:'1' }, draft.look || {});
+  if (!['slim','average','athletic','shredded'].includes(draft.body)) draft.body = 'average';
   if (S.char) draft.weight = curWeight();
   cStep = 0;
   openSheet(`<div id="creator"></div>`, { full:true, onClose: () => { if (!S.char) setTimeout(() => openCreator(true), 0); } });
   drawCreator(isNew);
 }
+const draftWear = () => LOOK.wearOf(draft, S.wardrobe);
+const draftStage = () => LOOK.ORDER[{ slim:0, average:1, athletic:2, shredded:3 }[draft.body] ?? 1];
+function creatorPreview() {
+  if (cStep === 1) return `<div class="cface gymbg">${LOOK.face(draft)}</div>`;
+  if (cStep === 0 && !S.char) return '';
+  return `<div class="cbody gymbg">${LOOK.img(draft, draftStage(), draftWear())}<span class="fa-chip">${LOOK.NAMES[draft.gender === 'f' ? 'f' : 'm'][draftStage()]}</span></div>`;
+}
 function drawCreator(isNew) {
   const box = $('#creator'); if (!box) return;
-  const opt = (key, map) => `<div class="chips" style="flex-wrap:wrap">${Object.entries(map).map(([k, n]) => `<button class="chip ${draft[key] === k ? 'on' : ''}" data-c="${key}" data-v="${k}">${n}</button>`).join('')}</div>`;
-  const sw = (key, list) => `<div class="swatches">${list.map((col, i) => `<button class="sw ${draft[key] === i ? 'on' : ''}" style="background:${col}" data-c="${key}" data-v="${i}" data-num="1" aria-label="Цвет ${i + 1}"></button>`).join('')}</div>`;
+  const gg = draft.gender === 'f' ? 'f' : 'm', L = LOOK.look(draft);
   const rng = (key, min, max, step, unit, label) => `<div class="field"><span class="lab">${label}</span><div class="range"><input type="range" min="${min}" max="${max}" step="${step}" value="${draft[key]}" data-r="${key}" data-u="${unit}" aria-label="${label}"><output id="o_${key}">${draft[key]} ${unit}</output></div></div>`;
+  const pick = (c) => Object.assign({}, draft, c);
   const pages = [
-    () => `<div class="field"><label for="cname">Имя персонажа</label><input class="input" id="cname" value="${esc(draft.name)}" placeholder="Например, Алекс" maxlength="24"></div>
-      <div class="field"><span class="lab">Пол</span><div class="seg"><button class="${draft.gender === 'm' ? 'on' : ''}" data-c="gender" data-v="m">Мужской</button><button class="${draft.gender === 'f' ? 'on' : ''}" data-c="gender" data-v="f">Женский</button></div></div>
-      ${rng('age', 14, 80, 1, plural(draft.age,'год','года','лет'), 'Возраст')}
-      <div class="field"><span class="lab">Цвет кожи</span>${sw('skin', AV.SKIN)}</div>`,
-    () => `<div class="field"><span class="lab">Форма головы</span>${opt('head', AV.HEADS)}</div>
-      <div class="field"><span class="lab">Цвет глаз</span>${sw('eyes', AV.EYES)}</div>
-      ${draft.gender === 'm' ? `<div class="field"><span class="lab">Борода</span>${opt('beard', AV.BEARDS)}</div>` : ''}
-      <div class="field"><span class="lab">Очки</span><div class="seg"><button class="${!draft.glasses ? 'on' : ''}" data-c="glasses" data-v="0">Без очков</button><button class="${draft.glasses ? 'on' : ''}" data-c="glasses" data-v="1">В очках</button></div></div>`,
-    () => `<div class="field"><span class="lab">Причёска</span>${opt('hair', AV.HAIRS)}</div>
-      <div class="field"><span class="lab">Цвет волос</span>${sw('hairColor', AV.HAIR)}</div>
-      <div class="field"><span class="lab">Цвет формы</span>${sw('outfit', AV.OUTFIT)}</div>`,
-    () => `${rng('height', 140, 210, 1, 'см', 'Рост')}${rng('weight', 40, 180, 0.5, 'кг', 'Вес')}
-      <div class="field"><span class="lab">Телосложение</span>${opt('body', AV.BODIES)}</div>
-      <div class="muted small" id="bmi">ИМТ ${AV.morph(draft).bmi.toFixed(1)} — фигура персонажа рассчитана по вашим росту и весу.</div>`,
+    () => `<div class="hero gymbg"><img src="logo.png" class="hero-logo" alt="FitAvatar"><div class="hero-t">Выбери персонажа</div>
+        <div class="hero-pick">${['m', 'f'].map(x => `<button class="hero-card ${draft.gender === x ? 'on' : ''}" data-c="gender" data-v="${x}">${LOOK.img(pick({ gender:x, look:{ h:'a', hc:x === 'f' ? 1 : 0, eye:'1' } }), 'fit', {})}<b>${x === 'f' ? 'Девушка' : 'Парень'}</b></button>`).join('')}</div></div>
+      <div class="field"><label for="cname">Имя персонажа</label><input class="input" id="cname" value="${esc(draft.name)}" placeholder="Например, Алекс" maxlength="24"></div>
+      ${rng('age', 14, 80, 1, plural(draft.age,'год','года','лет'), 'Возраст')}`,
+    () => `<div class="field"><span class="lab">Причёска</span><div class="chips" style="flex-wrap:wrap">${LOOK.HAIRS[gg].map(([k, n]) => `<button class="chip ${L.h === k ? 'on' : ''}" data-c="lh" data-v="${k}">${n}</button>`).join('')}</div></div>
+      <div class="field"><span class="lab">Цвет волос</span><div class="swatches">${LOOK.HCOL.map(([n, d, l], i) => `<button class="sw ${L.hc === i ? 'on' : ''}" style="background:linear-gradient(135deg,rgb(${l}),rgb(${d}))" data-c="lhc" data-v="${i}" data-num="1" aria-label="${n}" title="${n}"></button>`).join('')}</div></div>
+      <div class="field"><span class="lab">Форма глаз</span><div class="chips" style="flex-wrap:wrap">${LOOK.EYES.map(([k, n]) => `<button class="chip ${L.eye === k ? 'on' : ''}" data-c="leye" data-v="${k}">${n}</button>`).join('')}</div></div>`,
+    () => `<div class="field"><span class="lab">Телосложение сейчас</span><div class="builds">${LOOK.ORDER.map(st => `<button class="build ${draftStage() === st ? 'on' : ''}" data-c="body" data-v="${LOOK.BUILD[st]}">${LOOK.img(draft, st, draftWear())}<b>${LOOK.NAMES[gg][st]}</b></button>`).join('')}</div>
+        <div class="muted small">Честно выберите, как вы выглядите сейчас. Тренировки и питание будут менять форму персонажа.</div></div>
+      ${rng('height', 140, 210, 1, 'см', 'Рост')}${rng('weight', 40, 180, 0.5, 'кг', 'Вес')}
+      <div class="muted small" id="bmi">ИМТ ${AV.morph(draft).bmi.toFixed(1)}.</div>`,
     () => `<div class="field"><span class="lab">Главная цель</span><div class="goal">
         ${D.GOAL_ORDER.map(k => [k, D.GOALS[k].name, D.GOALS[k].short]).map(([k, n, s]) => `<button class="${draft.goal === k ? 'on' : ''}" data-c="goal" data-v="${k}"><b>${n}</b><span>${s}</span></button>`).join('')}</div></div>
       <div class="field"><span class="lab">Где тренируетесь</span><div class="seg"><button class="${draft.place === 'home' ? 'on' : ''}" data-c="place" data-v="home">Дома</button><button class="${draft.place === 'gym' ? 'on' : ''}" data-c="place" data-v="gym">В зале</button></div></div>
@@ -835,11 +846,11 @@ function drawCreator(isNew) {
   box.innerHTML = `<div class="session-top">${cStep ? `<button class="icon-btn" data-cnav="-1" aria-label="Назад">${IC.back}</button>` : S.char ? `<button class="icon-btn" data-act="close" aria-label="Закрыть">${IC.close}</button>` : '<span style="width:44px"></span>'}
       <div style="text-align:center"><div class="muted small">Шаг ${cStep + 1} из ${C_STEPS.length}</div><h2>${isNew && !cStep ? 'Создайте своего персонажа' : C_STEPS[cStep]}</h2></div><span style="width:44px"></span></div>
     <div class="dots">${C_STEPS.map((_, i) => `<i class="${i === cStep ? 'on' : ''}"></i>`).join('')}</div>
-    <div class="creator-preview" id="cprev">${AV.render(draft, S.char ? S.fit : {})}</div>
+    <div id="cprev">${creatorPreview()}</div>
     <div style="display:grid;gap:16px">${pages[cStep]()}</div>
     <button class="btn" data-cnav="1">${cStep < C_STEPS.length - 1 ? 'Дальше' : S.char ? 'Сохранить' : 'Начать путь'}</button>`;
 }
-const refreshPreview = () => { const p = $('#cprev'); if (p) p.innerHTML = AV.render(draft, S.char ? S.fit : {}); const b = $('#bmi'); if (b) b.textContent = `ИМТ ${AV.morph(draft).bmi.toFixed(1)} — фигура персонажа рассчитана по вашим росту и весу.`; };
+const refreshPreview = () => { const b = $('#bmi'); if (b) b.textContent = `ИМТ ${AV.morph(draft).bmi.toFixed(1)}.`; };
 function readCreatorInputs() {
   const n = $('#cname'); if (n) draft.name = n.value.trim();
   const a = $('#cact'); if (a) draft.activity = +a.value;
@@ -857,6 +868,39 @@ function finishCreator() {
   S.char = c; save(); syncPlan();
   closeAll(); render();
   if (isNew) toast(`Персонаж создан! ${D.progById[S.program.id].name}`);
+}
+
+/* ---------- Гардероб ---------- */
+let wrSlot = 't';
+function openWardrobe() {
+  openSheet(`<div id="wardrobe"></div>`, { full:true });
+  drawWardrobe();
+}
+function drawWardrobe() {
+  const box = $('#wardrobe'); if (!box) return;
+  const c = charNow(), gg = c.gender === 'f' ? 'f' : 'm', wr = S.wardrobe, wear = LOOK.wearOf(c, wr), st = LOOK.stage(c, S.fit);
+  const slots = LOOK.SLOTS.filter(([k]) => LOOK.itemsOf(gg).some(x => x.slot === k));
+  if (!slots.some(([k]) => k === wrSlot)) wrSlot = 't';
+  const items = LOOK.itemsOf(gg).filter(x => x.slot === wrSlot);
+  const own = (it) => it.base || wr.own.includes(gg + ':' + it.id);
+  const worn = (it) => (wear[it.slot] || '') === (it.base ? '' : it.id);
+  box.innerHTML = `<div class="sheet-head"><h2>Гардероб</h2><button class="icon-btn" data-act="close" aria-label="Закрыть">${IC.close}</button></div>
+    <div class="wr-top gymbg">${LOOK.img(c, st, wear)}<div class="wr-coins">🪙 <b>${fmt(S.coins || 0)}</b><span>монет</span></div></div>
+    <div class="muted small">Монеты начисляются за каждое выполненное задание, тренировку, воду и шаги — столько же, сколько опыта. На всей форме — логотип FitAvatar.</div>
+    <div class="chips">${slots.map(([k, n]) => `<button class="chip ${wrSlot === k ? 'on' : ''}" data-act="wr-slot" data-v="${k}">${n}</button>`).join('')}</div>
+    <div class="wr-grid">${items.map(it => { const w = Object.assign({}, wear, { [it.slot]: it.base ? '' : it.id });
+      return `<div class="wr-item ${worn(it) ? 'on' : ''}"><div class="wr-pic">${LOOK.img(c, st, w)}</div><b>${esc(it.name)}</b>
+        ${worn(it) ? '<span class="tag">Надето</span>' : own(it) ? `<button class="btn sm" data-act="wr-wear" data-v="${it.id}">Надеть</button>`
+          : `<button class="btn sm ${(S.coins || 0) < it.price ? 'ghost' : ''}" data-act="wr-buy" data-v="${it.id}">🪙 ${it.price}</button>`}</div>`; }).join('')}</div>`;
+}
+function wrBuy(id) {
+  const gg = S.char.gender === 'f' ? 'f' : 'm', it = LOOK.itemById(gg, id); if (!it) return;
+  if ((S.coins || 0) < it.price) { toast(`Нужно ещё ${it.price - (S.coins || 0)} монет — выполняйте задания и тренировки`); PF.haptic('warning'); return; }
+  S.coins -= it.price; S.wardrobe.own.push(gg + ':' + id); wrWear(id, true); PF.haptic('success'); toast(`${it.name} — ваша! Уже надета.`);
+}
+function wrWear(id, quiet) {
+  const gg = S.char.gender === 'f' ? 'f' : 'm', it = LOOK.itemById(gg, id); if (!it) return;
+  S.wardrobe.wear[gg][it.slot] = it.base ? '' : id; save(); drawWardrobe(); render(); if (!quiet) PF.haptic('light');
 }
 
 /* ---------- Повышение уровня ---------- */
@@ -942,6 +986,10 @@ const acts = {
   'food-del': (b) => { day().food.splice(+b.dataset.i, 1); save(); render(); },
   weigh: () => openWeigh(),
   creator: () => openCreator(false),
+  wardrobe: () => openWardrobe(),
+  'wr-slot': (b) => { wrSlot = b.dataset.v; drawWardrobe(); },
+  'wr-buy': (b) => wrBuy(b.dataset.v),
+  'wr-wear': (b) => wrWear(b.dataset.v),
   health: async () => {
     if (!S.settings.health) { const r = await PF.Health.connect(); if (!r.ok) return toast('Не удалось подключить: ' + (r.reason || 'нет доступа')); S.settings.health = true; save(); }
     await syncHealth(false); render();
@@ -989,9 +1037,9 @@ document.addEventListener('click', (e) => {
     readCreatorInputs();
     const k = c.dataset.c; let v = c.dataset.v;
     if (c.dataset.num) v = +v;
-    if (k === 'glasses') v = v === '1';
-    draft[k] = v;
-    if (k === 'gender') { if (v === 'f' && draft.hair === 'short') draft.hair = 'long'; if (v === 'm' && draft.hair === 'long') draft.hair = 'short'; }
+    if (k === 'lh' || k === 'lhc' || k === 'leye') draft.look = Object.assign({}, draft.look, { [{ lh:'h', lhc:'hc', leye:'eye' }[k]]: v });
+    else draft[k] = v;
+    if (k === 'gender') draft.look = { h:'a', hc:v === 'f' ? 1 : 0, eye:draft.look?.eye || '1' };
     PF.haptic('light'); drawCreator(!S.char); return;
   }
   const n = e.target.closest('[data-cnav]');

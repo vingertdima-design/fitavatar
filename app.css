@@ -203,3 +203,34 @@ textarea.input{min-height:120px;font-family:ui-monospace,monospace;font-size:13p
 .stepper{display:inline-flex;align-items:center;gap:12px}
 .stepper button{width:44px;height:44px;border-radius:14px;border:0;background:var(--surface2);color:var(--ink);font:700 22px/1 var(--body);cursor:pointer}
 .stepper b{min-width:72px;text-align:center;font-family:var(--display);font-size:22px}
+
+/* персонажи, зал, гардероб */
+.arena.gymbg{background-color:#15161b}
+.arena .stage{flex-direction:column}
+.wr-btn{position:absolute;left:50%;bottom:-4px;transform:translateX(-50%);z-index:3;display:inline-flex;gap:6px;align-items:center;white-space:nowrap;font:700 12px/1 var(--body);color:#fff;background:rgba(255,77,46,.9);padding:8px 12px;border-radius:99px;box-shadow:0 6px 18px rgba(255,77,46,.4)}
+.wr-btn svg{width:14px;height:14px}
+.pill.coin{font-weight:700}
+#cprev:empty{display:none}
+.cbody,.cface{position:relative;height:300px;border-radius:24px;overflow:hidden;display:flex;justify-content:center;align-items:flex-end}
+.cbody .fa-img{height:112%;width:auto;margin-bottom:-6%}
+.cface .fa-img{height:100%;width:auto}
+.hero{border-radius:24px;padding:18px 12px 14px;display:grid;gap:10px;justify-items:center;text-align:center}
+.hero-logo{width:84px;height:84px;border-radius:50%;box-shadow:0 0 40px rgba(255,77,46,.45)}
+.hero-t{font-family:var(--display);font-size:26px;text-transform:uppercase;color:#fff}
+.hero-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.hero-card{position:relative;display:grid;justify-items:center;gap:4px;padding:8px 4px 10px;border-radius:20px;background:rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.12);color:#fff;font:700 15px/1 var(--body)}
+.hero-card .fa-img{height:230px;width:auto}
+.hero-card.on{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,77,46,.25),0 10px 30px rgba(255,77,46,.35)}
+.builds{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.build{display:grid;justify-items:center;gap:4px;padding:6px 2px 8px;border-radius:16px;background:var(--surface2);border:2px solid transparent;font:600 11px/1.15 var(--body);color:var(--text)}
+.build .fa-img{height:120px;width:auto}
+.build.on{border-color:var(--accent);background:var(--arena);color:#fff}
+.wr-top{position:relative;height:280px;border-radius:24px;overflow:hidden;display:flex;justify-content:center;align-items:flex-end}
+.wr-top .fa-img{height:110%;width:auto;margin-bottom:-5%}
+.wr-coins{position:absolute;right:12px;top:12px;display:grid;justify-items:end;color:#fff;font-size:20px;background:rgba(0,0,0,.45);padding:8px 12px;border-radius:16px}
+.wr-coins b{font-family:var(--display);font-size:26px}.wr-coins span{font-size:11px;color:#c9cbd3}
+.wr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.wr-item{display:grid;justify-items:center;gap:6px;padding:10px;border-radius:20px;background:var(--surface2);border:2px solid transparent;text-align:center}
+.wr-item.on{border-color:var(--accent)}
+.wr-pic{height:170px;width:100%;border-radius:14px;overflow:hidden;display:flex;justify-content:center;align-items:flex-end;background:linear-gradient(180deg,#2a2c36,#15161b)}
+.wr-pic .fa-img{height:118%;width:auto;margin-bottom:-6%}
