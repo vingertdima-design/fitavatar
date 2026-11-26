@@ -355,8 +355,8 @@ function vWorkouts() {
 const typeName = { str:'Сила', cardio:'Кардио', flex:'Растяжка' };
 /* ---------- Библиотека упражнений: группы → инвентарь → карточки с кадрами техники ---------- */
 const exPic = (x, cls = '') => x.img
-  ? `<span class="xpic ${cls}"><img src="${D.exImg(x, 'a')}" alt="" loading="lazy" decoding="async"><img class="b" src="${D.exImg(x, 'b')}" alt="" loading="lazy" decoding="async"></span>`
-  : `<span class="xpic svg ${cls}" data-anim="${x.anim}"></span>`;
+  ? `<span class="xpic ${cls}"><img src="${D.exImg(x, 'a')}" alt="" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'"><img class="b" src="${D.exImg(x, 'b')}" alt="" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'"></span>`
+  : x.anim ? `<span class="xpic svg ${cls}" data-anim="${x.anim}"></span>` : `<span class="xpic svg ${cls}"></span>`;
 const plEx = (n) => `${n} ${plural(n, 'упражнение', 'упражнения', 'упражнений')}`;
 const exCard = (x) => `<button class="xcard" data-act="ex" data-id="${x.id}">${exPic(x)}
   <span class="xc-b"><b>${esc(x.name)}</b><span class="xc-eq">${esc(x.eq || '')}</span></span>${exLocked(x) ? `<span class="xc-lock">${exTier(x) >= 2 ? '⭐' : '🔒'}</span>` : ''}</button>`;
@@ -368,15 +368,17 @@ function exLib() {
   const g = D.GROUPS.find(g => g.id === exFilter);
   if (!g) {
     const total = D.EX.length, withImg = D.EX.filter(x => x.img).length;
-    return `${search}<div class="muted small">${plEx(total)} · ${withImg} с фото техники · штанга, гантели, тренажёры, блоки и свой вес</div>
+    return `${search}<div class="muted small">${plEx(total)} · ${withImg} с фото и анимацией техники · штанга, гантели, тренажёры, блоки и свой вес</div>
     <div class="mgrid">${D.GROUPS.map(g => { const L = g.list(); if (!L.length) return ''; const c = D.exById[g.cover] || L.find(x => x.img) || L[0];
       return `<button class="mtile" data-act="exfilter" data-v="${esc(g.id)}">${exPic(c, 'still')}<span class="mt-b"><b>${esc(g.name)}</b><span>${plEx(L.length)}</span></span></button>`; }).join('')}</div>`;
   }
   const L = g.list(), eqs = D.EQ_ORDER.filter(e => L.some(x => x.eq === e)), eq = eqs.includes(exEq) ? exEq : 'все';
   const list = L.filter(x => eq === 'все' || x.eq === eq).sort((a, b) => (b.img ? 1 : 0) - (a.img ? 1 : 0));
+  const main = list.filter(x => x.muscles[0] === g.id), also = list.filter(x => x.muscles[0] !== g.id);
   return `<div class="ghead"><button class="icon-btn" data-act="exfilter" data-v="все" aria-label="Все группы">${IC.chev.replace('<svg', '<svg style="transform:rotate(180deg)"')}</button><div><h2>${esc(g.name)}</h2><div class="muted small">${plEx(L.length)}</div></div></div>
     <div class="chips">${['все', ...eqs].map(e => `<button class="chip ${eq === e ? 'on' : ''}" data-act="exeq" data-v="${esc(e)}">${e === 'все' ? 'Всё' : esc(e[0].toUpperCase() + e.slice(1))} <span class="cnt">${e === 'все' ? L.length : L.filter(x => x.eq === e).length}</span></button>`).join('')}</div>
-    <div class="xgrid" id="exlist">${list.map(exCard).join('')}</div>`;
+    <div class="xgrid" id="exlist">${main.map(exCard).join('')}</div>
+    ${also.length ? `<h3 style="margin-top:6px">Тоже нагружают ${esc(g.name.toLowerCase())}</h3><div class="muted small" style="margin-top:-6px">Базовые упражнения, где ${esc(g.name.toLowerCase())} помогает основной мышце</div><div class="xgrid">${also.map(exCard).join('')}</div>` : ''}`;
 }
 
 function myPlanCard() {
@@ -408,14 +410,14 @@ function openExercise(id) {
   const alts = D.EX.filter(y => y.id !== x.id && y.muscles[0] === x.muscles[0]).sort((a, b) => (b.img ? 2 : 0) + (b.eq !== x.eq ? 1 : 0) - (a.img ? 2 : 0) - (a.eq !== x.eq ? 1 : 0)).slice(0, 8);
   const sh = openSheet(`<div class="sheet-head"><div><h2>${esc(x.name)}</h2><div class="tags" style="margin-top:6px"><span class="tag a">${esc(x.eq || typeName[x.type])}</span>${x.muscles.map(m => `<span class="tag">${esc(m)}</span>`).join('')}<span class="tag">${x.place === 'gym' ? 'Зал' : 'Можно дома'}</span></div></div><button class="icon-btn" data-act="close" aria-label="Закрыть">${IC.close}</button></div>
     ${x.img ? `<div class="xhero">${exPic(x, 'big')}<span class="xh-l a">Старт</span><span class="xh-l b">Финиш</span></div>
-    <div class="xframes"><figure><img src="${D.exImg(x, 'a')}" alt="Исходное положение"><figcaption>1 · Исходное положение</figcaption></figure><figure><img src="${D.exImg(x, 'b')}" alt="Конечная точка"><figcaption>2 · Пиковое сокращение</figcaption></figure></div>` : `<div class="demo" id="demo"></div>`}
+    <div class="xframes"><figure><img src="${D.exImg(x, 'a')}" alt="Исходное положение"><figcaption>1 · Исходное положение</figcaption></figure><figure><img src="${D.exImg(x, 'b')}" alt="Конечная точка"><figcaption>2 · Пиковое сокращение</figcaption></figure></div><div class="xsrc">Фото техники: открытая база free-exercise-db (public domain)</div>` : `<div class="demo" id="demo"></div>`}
     <div><h3 style="margin-bottom:8px">Как выполнять</h3><ol class="steps">${x.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
     <div><h3 style="margin-bottom:8px">Частые ошибки</h3><ul class="clean">${x.mistakes.map(s => `<li>${esc(s)}</li>`).join('')}</ul></div>
     <div class="card"><b>Дыхание.</b> ${esc(x.breath)}</div>
     ${exCoach(x)}
     ${alts.length ? `<div><h3 style="margin-bottom:8px">Альтернативы на ${esc(x.muscles[0])}</h3><div class="xalt">${alts.map(exCard).join('')}</div></div>` : ''}
     <button class="btn ghost" data-act="video" data-q="${esc(x.name + ' техника выполнения')}">${IC.video}Видео с техникой</button>`, { onClose: () => stopDemo && stopDemo() });
-  stopDemo = null; const dm = $('#demo', sh); if (dm) stopDemo = ExAnim.mount(dm, x.anim); mountThumbs(sh);
+  stopDemo = null; const dm = $('#demo', sh); if (dm && x.anim) stopDemo = ExAnim.mount(dm, x.anim); mountThumbs(sh);
 }
 function exCoach(x) {
   const g = S.char.goal, L = COACH.last(S.log, x.id), best = COACH.best(S.log, x.id), sw = COACH.swaps(x, S.char.place);
@@ -496,7 +498,7 @@ function renderSession() {
       ${workCoach(cur, goal)}
       ${cur.it.time && !sess.left ? `<button class="btn" data-act="s-timer">${IC.play}Старт ${work}</button>` : cur.it.time ? `<button class="btn ghost" data-act="s-set">Завершить подход</button>` : `<button class="btn" data-act="s-set">${IC.check}Подход выполнен</button>`}
       <button class="link" data-act="s-next">Пропустить упражнение</button>`}`;
-  if (sess.phase === 'work') { stopDemo && stopDemo(); stopDemo = null; const sd = $('#sdemo', box); if (cur.ex.img) { sd.className = 'xhero'; sd.innerHTML = exPic(cur.ex, 'big') + '<span class="xh-l a">Старт</span><span class="xh-l b">Финиш</span>'; } else stopDemo = ExAnim.mount(sd, cur.ex.anim); }
+  if (sess.phase === 'work') { stopDemo && stopDemo(); stopDemo = null; const sd = $('#sdemo', box); if (cur.ex.img) { sd.className = 'xhero'; sd.innerHTML = exPic(cur.ex, 'big') + '<span class="xh-l a">Старт</span><span class="xh-l b">Финиш</span>'; } else if (cur.ex.anim) stopDemo = ExAnim.mount(sd, cur.ex.anim); }
   if (sess.phase === 'rest') { const tt = $('#rtip', box); if (tt) tt.textContent = restTip(cur); }
   if (sess.left > 0) {
     sessTimer = setInterval(() => {
