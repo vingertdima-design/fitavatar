@@ -192,3 +192,7 @@ textarea.input{min-height:120px;font-family:ui-monospace,monospace;font-size:13p
 .card>.row>svg{width:28px;height:28px;flex:none;color:var(--accent)}
 .setdots{margin:4px 0 10px}
 .seg button.on{background:light-dark(#fff,#34363f)}
+
+.tag.lock{background:var(--surface2);color:var(--muted)}
+.guide{display:grid;gap:10px;line-height:1.55}.guide h3{margin-top:6px}.guide p{margin:0}.guide .card{background:var(--surface)}
+.card>.row.between>h2,.card>.row.between>div{flex:1;min-width:0}.card>.row.between>.tag{flex:none;white-space:nowrap}
