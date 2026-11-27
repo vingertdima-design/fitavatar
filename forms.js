@@ -120,7 +120,8 @@
     if (pending[key]) return pending[key];
     // порядок: база (тонируется) → одежда (без тонировки) → причёска (тонируется отдельно) → аксессуар
     var srcs = ['c-' + gg + '-' + st + '.webp'], clothes = [];
-    SLOT_ORDER.forEach(function (s) { if (wear[s]) clothes.push('c-' + gg + '-' + s + '-' + wear[s] + '-' + st + '.webp'); });
+    var topOver = wear.t === 'hood';   // оверсайз-худи носится поверх штанов
+    (topOver ? ['b', 's', 't'] : SLOT_ORDER).forEach(function (s) { if (wear[s]) clothes.push('c-' + gg + '-' + s + '-' + wear[s] + '-' + st + '.webp'); });
     var hairSrc = L.h !== 'a' ? 'c-' + gg + '-h-' + L.h + '-' + st + '.webp' : '';
     var accSrc = wear.a ? 'c-' + gg + '-a-' + wear.a + '-' + st + '.webp' : '';
     var all = srcs.concat(clothes, [hairSrc, accSrc]).map(function (s) { return s ? loadImg(s) : Promise.resolve(null); });
