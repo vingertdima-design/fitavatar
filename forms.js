@@ -41,6 +41,7 @@
       { id: 'pants', slot: 'b', name: 'Широкие штаны', price: 200 },
       { id: 'snk', slot: 's', name: 'Кроссовки', price: 0, base: 1 },
       { id: 'hi', slot: 's', name: 'Кроссовки High', price: 180 },
+      { id: 'hood', slot: 't', name: 'Худи FITAVATAR оверсайз', price: 300, brand: 1 },
     ],
     f: [
       { id: 'top', slot: 't', name: 'Спортивный топ', price: 0, base: 1 },
@@ -51,6 +52,7 @@
       { id: 'snk', slot: 's', name: 'Кроссовки', price: 0, base: 1 },
       { id: 'hi', slot: 's', name: 'Кроссовки Pro', price: 180 },
       { id: 'band', slot: 'a', name: 'Повязка', price: 80 },
+      { id: 'hood', slot: 't', name: 'Худи FITAVATAR оверсайз', price: 300, brand: 1 },
     ],
   };
   var SLOTS = [['t', 'Верх'], ['b', 'Низ'], ['s', 'Обувь'], ['a', 'Аксессуары']];
@@ -116,16 +118,28 @@
     var key = keyOf(gg, st, L, wear);
     if (outCache[key]) return Promise.resolve(outCache[key]);
     if (pending[key]) return pending[key];
-    var srcs = ['c-' + gg + '-' + st + '.webp'];
-    SLOT_ORDER.forEach(function (s) { if (wear[s]) srcs.push('c-' + gg + '-' + s + '-' + wear[s] + '-' + st + '.webp'); });
-    if (L.h !== 'a') srcs.push('c-' + gg + '-h-' + L.h + '-' + st + '.webp');
-    if (wear.a) srcs.push('c-' + gg + '-a-' + wear.a + '-' + st + '.webp');
-    pending[key] = Promise.all(srcs.map(loadImg).concat([loadImg('logo.png')])).then(function (ims) {
+    // порядок: база (тонируется) → одежда (без тонировки) → причёска (тонируется отдельно) → аксессуар
+    var srcs = ['c-' + gg + '-' + st + '.webp'], clothes = [];
+    SLOT_ORDER.forEach(function (s) { if (wear[s]) clothes.push('c-' + gg + '-' + s + '-' + wear[s] + '-' + st + '.webp'); });
+    var hairSrc = L.h !== 'a' ? 'c-' + gg + '-h-' + L.h + '-' + st + '.webp' : '';
+    var accSrc = wear.a ? 'c-' + gg + '-a-' + wear.a + '-' + st + '.webp' : '';
+    var all = srcs.concat(clothes, [hairSrc, accSrc]).map(function (s) { return s ? loadImg(s) : Promise.resolve(null); });
+    pending[key] = Promise.all(all.concat([loadImg('logo.png')])).then(function (ims) {
       var logo = ims.pop(), c = document.createElement('canvas'); c.width = 480; c.height = 640;
       var x = c.getContext('2d', { willReadFrequently: true });
-      ims.forEach(function (im) { if (im) x.drawImage(im, 0, 0, 480, 640); });
+      if (ims[0]) x.drawImage(ims[0], 0, 0, 480, 640);
       try { tint(x, 480, 640, L.hc); } catch (e) {}
-      if (logo) {
+      ims.slice(1, 1 + clothes.length).forEach(function (im) { if (im) x.drawImage(im, 0, 0, 480, 640); });
+      var hairIm = ims[1 + clothes.length], accIm = ims[2 + clothes.length];
+      if (hairIm) {
+        var hc = document.createElement('canvas'); hc.width = 480; hc.height = 640;
+        var hx = hc.getContext('2d', { willReadFrequently: true }); hx.drawImage(hairIm, 0, 0, 480, 640);
+        try { tint(hx, 480, 640, L.hc); } catch (e) {}
+        x.drawImage(hc, 0, 0);
+      }
+      if (accIm) x.drawImage(accIm, 0, 0, 480, 640);
+      var topIt = wear.t && itemById(gg, wear.t);
+      if (logo && !(topIt && topIt.brand)) {
         var p = LOGO[gg][st], s = 15;
         var bare = gg === 'm' && st === 'pro' && !wear.t;   // сухая форма у парня — без майки
         if (!bare) { x.save(); x.globalAlpha = 0.92; x.beginPath(); x.arc(p[0], p[1], s / 2 + 1, 0, 6.3); x.clip(); x.drawImage(logo, p[0] - s / 2, p[1] - s / 2, s, s); x.restore(); }
