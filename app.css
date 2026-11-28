@@ -274,3 +274,17 @@ textarea.input{min-height:120px;font-family:ui-monospace,monospace;font-size:13p
 .xalt{display:grid;grid-auto-flow:column;grid-auto-columns:44%;gap:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.xalt::-webkit-scrollbar{display:none}
 .xsrc{font-size:11px;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.xpic img,.xh-l,.xpic::after{animation:none!important}.xpic img.b{display:none}}
+/* напоминания и бонусы */
+.rem{display:grid;gap:12px}
+.rem-row{border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;gap:10px}
+.rem-h{display:flex;align-items:center;gap:10px}.rem-h span{font-size:22px}.rem-h b{flex:1;font-size:16px}
+.rem-b{display:grid;gap:10px}.rem-b.off{opacity:.4;pointer-events:none}
+.rem-b .row{gap:8px}.rem-b .input{flex:1;min-width:0}
+.tgl{width:52px;height:30px;border-radius:99px;background:var(--surface2);border:0;position:relative;padding:0;flex:none;transition:background .2s}
+.tgl i{position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
+.tgl.on{background:#ff4d2e}.tgl.on i{transform:translateX(22px)}
+.dstrip{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;width:100%}
+.dstrip span{display:grid;gap:2px;justify-items:center;padding:8px 0;border-radius:12px;background:rgba(255,255,255,.08);font-size:12px;font-weight:700;color:#d4d6de}
+.dstrip span b{font-size:11px;opacity:.7}
+.dstrip span.on{background:linear-gradient(180deg,#ff4d2e,#ff7a2e);color:#fff}
+.dstrip span.big{outline:2px solid #f5b301}

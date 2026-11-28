@@ -736,6 +736,7 @@ async function checkPro(silent = true) {
   try {
     // простой GET без заголовков — работает и с Google Apps Script, и с bot.js
     const r = await fetch(apiUrl() + (apiUrl().includes('?') ? '&' : '?') + 'action=me&initData=' + encodeURIComponent(PF.TG.initData)).then(x => x.json());
+    if (r.refn != null) refCredit(+r.refn);
     if (r.full || r.pro) { S.pro = { full:true, at: r.at || Date.now() }; save(); render(); if (!silent) toast('Полный пакет открыт!'); }
     else if (!silent) toast('Оплата пока не найдена — попробуйте через минуту');
   } catch (e) { if (!silent) toast('Не удалось проверить оплату'); }
@@ -793,11 +794,12 @@ function vProfile() {
       ${H.nativeAvailable ? `<button class="btn ${S.settings.health ? 'ghost' : ''}" data-act="health">${S.settings.health ? 'Обновить данные' : 'Подключить ' + H.label}</button>`
         : `<div class="grid2"><button class="btn ghost" data-act="pedo">${PF.Pedometer.running ? 'Шагомер включён' : 'Включить шагомер'}</button><button class="btn ghost" data-act="steps">Ввести шаги</button></div>`}
       <div class="field"><span class="lab">Цель по шагам</span><div class="range"><input type="range" min="3000" max="20000" step="500" value="${S.settings.stepGoal}" data-set="stepGoal" aria-label="Цель по шагам"><output>${fmt(S.settings.stepGoal)}</output></div></div></div>
-    <div class="card" style="display:grid;gap:12px"><div class="row">${IC.bell}<div style="flex:1"><h3>Тренировка и напоминания</h3><div class="muted small">${PF.Reminders.available ? 'Ежедневное уведомление на телефоне' : PF.inTG ? 'Напоминания присылает бот: команда /remind 19:00' : 'Уведомления доступны в мобильном приложении'}</div></div></div>
-      <div class="field"><span class="lab">Отдых между подходами</span><div class="range"><input type="range" min="15" max="180" step="5" value="${S.settings.rest}" data-set="rest" aria-label="Отдых"><output>${S.settings.rest} сек</output></div></div>
-      ${PF.Reminders.available ? `<div class="row"><input class="input" type="time" value="${esc(S.settings.remindAt)}" id="rt" aria-label="Время напоминания" style="flex:1"><button class="btn sm" data-act="remind">${S.settings.remind ? 'Выключить' : 'Включить'}</button></div>` : ''}</div>
-    <div class="card" style="display:grid;gap:10px"><div class="row" style="gap:10px"><span style="font-size:26px">🎁</span><div style="flex:1"><h3>Пригласи друга</h3><div class="muted small">Друг получит +100 монет на старте. Тренироваться вместе — проще не бросить.</div></div></div>
-      <button class="btn" data-act="share">${IC.share}Пригласить</button></div>
+    <div class="card" style="display:grid;gap:12px"><div class="row">${IC.bell}<div style="flex:1"><h3>Напоминания</h3><div class="muted small">${PF.inTG ? 'Бот пришлёт сообщение в Telegram в нужное время' : PF.Reminders.available ? 'Уведомление на телефоне' : 'Напоминания работают в Telegram и в мобильном приложении'}</div></div>${S.rem && S.rem.bonus ? '' : '<span class="tag">+' + ECON.remind + ' 🪙</span>'}</div>
+      ${PF.inTG ? remCard() : PF.Reminders.available ? `<div class="row"><input class="input" type="time" value="${esc(S.settings.remindAt)}" id="rt" aria-label="Время напоминания" style="flex:1"><button class="btn sm" data-act="remind">${S.settings.remind ? 'Выключить' : 'Включить'}</button></div>` : ''}
+      <div class="field"><span class="lab">Отдых между подходами</span><div class="range"><input type="range" min="15" max="180" step="5" value="${S.settings.rest}" data-set="rest" aria-label="Отдых"><output>${S.settings.rest} сек</output></div></div></div>
+    <div class="card" style="display:grid;gap:10px"><div class="row" style="gap:10px"><span style="font-size:26px">🎁</span><div style="flex:1"><h3>Пригласи друга</h3><div class="muted small">Вам +${ECON.inviter} 🪙 за каждого друга, который создаст персонажа. Другу +${ECON.friend} 🪙 на старте.</div></div></div>
+      ${S.refPaid ? `<div class="row between small"><span class="muted">Пришло по вашей ссылке</span><b>${S.refPaid} ${plural(S.refPaid, 'друг', 'друга', 'друзей')} · +${fmt(S.refPaid * ECON.inviter)} 🪙</b></div>` : ''}
+      <button class="btn" data-act="share">${IC.share}Пригласить друга</button></div>
     ${PRO.enabled ? proCard() : ''}
     ${igCard()}
     <div class="card" style="display:grid;gap:10px"><h3>Данные</h3><div class="muted small">Прогресс хранится на устройстве${PF.inTG ? ' и в облаке Telegram — он сохранится при входе с другого телефона' : ''}.</div>
@@ -896,7 +898,8 @@ function finishCreator() {
   const bonus = isNew && inviteBonus();
   S.char = c; save(); syncPlan();
   closeAll(); render();
-  if (isNew) toast(bonus ? 'Персонаж создан! Подарок от друга: +100 монет 🪙' : `Персонаж создан! ${D.progById[S.program.id].name}`);
+  if (isNew) if (bonus) setTimeout(refClaim, 1500);
+  toast(bonus ? `Персонаж создан! Подарок от друга: +${ECON.friend} монет 🪙` : `Персонаж создан! ${D.progById[S.program.id].name}`);
 }
 
 /* ---------- Гардероб ---------- */
@@ -915,7 +918,7 @@ function drawWardrobe() {
   const worn = (it) => (wear[it.slot] || '') === (it.base ? '' : it.id);
   box.innerHTML = `<div class="sheet-head"><h2>Гардероб</h2><button class="icon-btn" data-act="close" aria-label="Закрыть">${IC.close}</button></div>
     <div class="wr-top gymbg">${LOOK.img(c, st, wear)}<div class="wr-coins">🪙 <b>${fmt(S.coins || 0)}</b><span>монет</span></div></div>
-    <div class="muted small">Монеты начисляются за каждое выполненное задание, тренировку, воду и шаги — столько же, сколько опыта. На всей форме — логотип FitAvatar.</div>
+    <div class="muted small">Монеты — за подходы, тренировки, воду, шаги и питание, а ещё бонус за вход каждый день и +300 за каждого друга. Начни с кепки, а худи FITAVATAR — награда для самых упорных.</div>
     <div class="chips">${slots.map(([k, n]) => `<button class="chip ${wrSlot === k ? 'on' : ''}" data-act="wr-slot" data-v="${k}">${n}</button>`).join('')}</div>
     <div class="wr-grid">${items.map(it => { const w = Object.assign({}, wear, { [it.slot]: it.base ? '' : it.id });
       return `<div class="wr-item ${worn(it) ? 'on' : ''}"><div class="wr-pic">${LOOK.img(c, st, w)}</div><b>${esc(it.name)}</b>
@@ -948,7 +951,7 @@ function showLevelUp(lvl) {
   layer.appendChild(w);
 }
 function inviteUrl() { const u = PF.tgUser(); return APP_URL + '?startapp=r' + (u ? u.id : '0'); }
-function shareText() { const L = levelInfo(); return `Мой персонаж в FitAvatar достиг ${L.lvl} уровня (${L.rank})! ${totalWorkouts()} тренировок, серия ${streak()} дн. Присоединяйся — по ссылке +100 монет на старте 💪`; }
+function shareText() { const L = levelInfo(); return `Мой персонаж в FitAvatar достиг ${L.lvl} уровня (${L.rank})! ${totalWorkouts()} тренировок, серия ${streak()} дн. Присоединяйся — по ссылке +150 монет на старте 💪`; }
 function share() {
   const story = PF.inTG && PF.TG.shareToStory && PF.TG.isVersionAtLeast && PF.TG.isVersionAtLeast('7.8');
   if (!story) return shareFriend();
@@ -964,7 +967,7 @@ function shareStory() {
 // бонус приглашённому: ссылка t.me/<bot>?startapp=r<id>
 function inviteBonus() {
   try { const sp = PF.inTG && PF.TG.initDataUnsafe && PF.TG.initDataUnsafe.start_param; const me = PF.tgUser();
-    if (sp && /^r\d+$/.test(sp) && (!me || sp !== 'r' + me.id) && !S.invitedBy) { S.invitedBy = sp.slice(1); S.coins = (S.coins || 0) + 100; return true; } } catch (e) {}
+    if (sp && /^r\d+$/.test(sp) && (!me || sp !== 'r' + me.id) && !S.invitedBy) { S.invitedBy = sp.slice(1); S.coins = (S.coins || 0) + ECON.friend; return true; } } catch (e) {}
   return false;
 }
 // Ссылка на ваш бот/приложение — замените на свою
@@ -1055,6 +1058,10 @@ const acts = {
   import: () => openImport(),
   reset: () => confirmBox('Удалить персонажа и весь прогресс?', 'Удалить', () => { PF.store.clear(); S = defaults(); migrateLook(); save(); closeAll(); render(); }),
   share: () => share(),
+  'rem-tog': (b) => remEdit(R => { R[b.dataset.v].on = !R[b.dataset.v].on; }),
+  'rem-day': (b) => remEdit(R => { const v = +b.dataset.v, d = R.train.days; R.train.days = d.includes(v) ? d.filter(x => x !== v) : d.concat(v).sort(); }),
+  'rem-every': (b) => remEdit(R => { R.water.every = +b.dataset.v; }),
+  'rem-save': () => remSave(),
   'share-story': () => { closeAll(); shareStory(); },
   'share-friend': () => { closeAll(); shareFriend(); },
   invite: () => shareFriend(),
@@ -1112,6 +1119,72 @@ document.addEventListener('input', (e) => {
 });
 document.addEventListener('keydown', e => { const pop = document.querySelector('.overlay.center'); if (e.key === 'Escape' && pop) { pop.remove(); return; } if (e.key === 'Escape' && stack.length && !(!S.char && $('#creator'))) closeTop(); });
 
+
+/* ---------- Экономика: бонусы, напоминания, приглашения ---------- */
+const ECON = { friend:150, inviter:300, remind:50, daily:[10, 15, 20, 25, 30, 40, 100] };
+function addCoins(n) { S.coins = Math.max(0, (S.coins || 0) + n); save(); }
+const api = (q) => fetch(apiUrl() + (apiUrl().includes('?') ? '&' : '?') + q + '&initData=' + encodeURIComponent(PF.TG.initData)).then(x => x.json());
+// ежедневный бонус за вход: 7-дневная лестница, пропуск дня — сначала
+function dailyBonus() {
+  if (!S.char) return;
+  const t = today(), L = S.login || { last:null, n:0 };
+  if (L.last === t) return;
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  const n = L.last === dkey(y) ? (L.n % 7) + 1 : 1, add = ECON.daily[n - 1];
+  S.login = { last:t, n }; addCoins(add);
+  setTimeout(() => {
+    const w = document.createElement('div'); w.className = 'overlay center';
+    w.innerHTML = `<div class="levelup"><div class="muted" style="color:#d4d6de">Бонус за вход · день ${n} из 7</div>
+      <div style="font-family:var(--display);font-size:60px;line-height:1">+${add} 🪙</div>
+      <div class="dstrip">${ECON.daily.map((v, i) => `<span class="${i < n ? 'on' : ''}${i === 6 ? ' big' : ''}"><b>${i + 1}</b>${v}</span>`).join('')}</div>
+      <div style="color:#d4d6de;font-size:14px">${n < 7 ? `Заходи каждый день — на 7-й день +${ECON.daily[6]} 🪙. Пропуск дня — серия сначала.` : 'Неделя без пропусков! Завтра новая серия.'}</div>
+      <button class="btn" data-x="ok">Забрать</button></div>`;
+    w.addEventListener('click', e => { if (e.target.closest('[data-x]') || e.target === w) { w.remove(); render(); } });
+    layer.appendChild(w); PF.haptic('success');
+  }, 700);
+}
+// приглашения: друг сообщает серверу, кто его пригласил; пригласивший получает монеты, когда сервер это подтвердит
+async function refClaim() {
+  if (!S.invitedBy || S.refSent || !apiUrl() || !PF.inTG || !PF.TG.initData) return;
+  try { const r = await api('action=ref&inv=' + encodeURIComponent(S.invitedBy)); if (r.ok) { S.refSent = 1; save(); } } catch (e) {}
+}
+function refCredit(n) {
+  const was = S.refPaid || 0; if (!(n > was)) return;
+  const k = n - was; S.refPaid = n; addCoins(k * ECON.inviter); render();
+  toast(`${k > 1 ? k + ' друга присоединились' : 'Друг присоединился'} по вашей ссылке: +${fmt(k * ECON.inviter)} 🪙`); PF.haptic('success');
+}
+// напоминания через бота
+const DOW = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+const remDefaults = () => ({ train:{ on:false, t:'19:00', days:[1, 3, 5] }, water:{ on:false, from:'09:00', to:'21:00', every:2 }, food:{ on:false, times:['08:30', '13:30', '19:00'] }, saved:false });
+function remCard() {
+  const R = S.rem || remDefaults(), sw = (k) => `<button class="tgl ${R[k].on ? 'on' : ''}" data-act="rem-tog" data-v="${k}" aria-label="Вкл/выкл"><i></i></button>`;
+  return `<div class="rem">
+    <div class="rem-row"><div class="rem-h"><span>💪</span><b>Тренировка</b>${sw('train')}</div>
+      <div class="rem-b ${R.train.on ? '' : 'off'}"><input class="input" type="time" value="${esc(R.train.t)}" data-rem="train.t" aria-label="Время тренировки"><div class="chips">${DOW.map((d, i) => `<button class="chip ${R.train.days.includes(i + 1) ? 'on' : ''}" data-act="rem-day" data-v="${i + 1}">${d}</button>`).join('')}</div></div></div>
+    <div class="rem-row"><div class="rem-h"><span>💧</span><b>Вода</b>${sw('water')}</div>
+      <div class="rem-b ${R.water.on ? '' : 'off'}"><div class="row"><input class="input" type="time" value="${esc(R.water.from)}" data-rem="water.from" aria-label="С"><span class="muted">—</span><input class="input" type="time" value="${esc(R.water.to)}" data-rem="water.to" aria-label="До"></div>
+      <div class="chips">${[1, 2, 3].map(h => `<button class="chip ${R.water.every === h ? 'on' : ''}" data-act="rem-every" data-v="${h}">каждые ${h} ч</button>`).join('')}</div></div></div>
+    <div class="rem-row"><div class="rem-h"><span>🍽</span><b>Питание</b>${sw('food')}</div>
+      <div class="rem-b ${R.food.on ? '' : 'off'}"><div class="row">${R.food.times.map((t, i) => `<input class="input" type="time" value="${esc(t)}" data-rem="food.${i}" aria-label="${['Завтрак', 'Обед', 'Ужин'][i]}">`).join('')}</div><div class="muted small">Завтрак · обед · ужин</div></div></div>
+    <button class="btn" data-act="rem-save">${R.saved ? 'Сохранить изменения' : 'Включить напоминания'}</button></div>`;
+}
+function remEdit(fn) { S.rem = S.rem || remDefaults(); fn(S.rem); save(); render(); }
+async function remSave() {
+  const R = S.rem || (S.rem = remDefaults());
+  if (!apiUrl() || !PF.inTG || !PF.TG.initData) return toast('Откройте приложение через бота @' + (CFG.bot || '') + ' — напоминания присылает он');
+  const allow = await new Promise(ok => { try { if (PF.TG.requestWriteAccess) PF.TG.requestWriteAccess(a => ok(a)); else ok(true); } catch (e) { ok(true); } });
+  if (!allow) return toast('Разрешите боту писать вам — иначе напоминания не придут');
+  const cfg = { train:R.train, water:R.water, food:R.food };
+  try {
+    const r = await api('action=remind&tz=' + new Date().getTimezoneOffset() + '&cfg=' + encodeURIComponent(JSON.stringify(cfg)));
+    if (!r.ok) throw 0;
+    R.saved = true; const any = R.train.on || R.water.on || R.food.on;
+    if (any && !R.bonus) { R.bonus = 1; addCoins(ECON.remind); toast(`Напоминания включены! +${ECON.remind} 🪙`); } else toast(any ? 'Напоминания сохранены — бот напишет в Telegram' : 'Напоминания выключены');
+    PF.haptic('success'); save(); render();
+  } catch (e) { toast('Не удалось сохранить — проверьте интернет и попробуйте ещё раз'); }
+}
+document.addEventListener('change', (e) => { const k = e.target.dataset && e.target.dataset.rem; if (!k) return; const [a, b] = k.split('.'); remEdit(R => { if (a === 'food') R.food.times[+b] = e.target.value; else R[a][b] = e.target.value; }); });
+
 /* ---------- Старт ---------- */
 PF.initTelegram(() => { if (stack.length) closeTop(); });
 applyDecay();
@@ -1119,6 +1192,7 @@ render();
 syncAutoHabits();
 // облако Telegram: берём более свежую версию
 checkPro();
+setTimeout(() => { dailyBonus(); refClaim(); }, 400);
 PF.store.loadCloud().then(v => { if (v && v.char && (!S.char || (v.ts || 0) > (S.ts || 0) + 5000)) { S = Object.assign(defaults(), v); migrateLook(); PF.store.save(S); closeAll(); render(); } });
 if (S.settings.health) syncHealth(true);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { if (S.settings.health) syncHealth(true); if (S.char) render(); } });
