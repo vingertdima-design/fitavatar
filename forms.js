@@ -42,6 +42,8 @@
       { id: 'snk', slot: 's', name: 'Кроссовки', price: 0, base: 1 },
       { id: 'hi', slot: 's', name: 'Кроссовки High', price: 180 },
       { id: 'hood', slot: 't', name: 'Худи FITAVATAR оверсайз', price: 300, brand: 1 },
+      { id: 'ftee', slot: 't', name: 'Футболка FITAVATAR', price: 150, brand: 1 },
+      { id: 'cap', slot: 'a', name: 'Кепка FITAVATAR', price: 100, brand: 1 },
     ],
     f: [
       { id: 'top', slot: 't', name: 'Спортивный топ', price: 0, base: 1 },
@@ -53,6 +55,8 @@
       { id: 'hi', slot: 's', name: 'Кроссовки Pro', price: 180 },
       { id: 'band', slot: 'a', name: 'Повязка', price: 80 },
       { id: 'hood', slot: 't', name: 'Худи FITAVATAR оверсайз', price: 300, brand: 1 },
+      { id: 'ftee', slot: 't', name: 'Футболка FITAVATAR', price: 150, brand: 1 },
+      { id: 'cap', slot: 'a', name: 'Кепка FITAVATAR', price: 100, brand: 1 },
     ],
   };
   var SLOTS = [['t', 'Верх'], ['b', 'Низ'], ['s', 'Обувь'], ['a', 'Аксессуары']];
