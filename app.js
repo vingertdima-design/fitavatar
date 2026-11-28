@@ -574,6 +574,8 @@ function vFood() {
     <div class="card">${d.food.length ? d.food.map((x, i) => `<div class="meal"><b>${esc(x.name)}</b><em>${fmt(x.kcal)} ккал <button class="icon-btn" style="display:inline-grid;width:36px;height:36px;vertical-align:middle;margin-left:4px;background:var(--bg)" data-act="food-del" data-i="${i}" aria-label="Удалить">${IC.trash}</button></em><span>${x.g ? x.g + ' г · ' : ''}Б ${Math.round(x.p)} · Ж ${Math.round(x.f)} · У ${Math.round(x.c)}</span></div>`).join('') : '<div class="muted">Пока пусто. Добавьте первый приём пищи — это +5 XP.</div>'}</div>
     ${foodCoach(t, e)}
     ${goalCard(t)}`;
+  } else if (fSeg === 'supp') {
+    body = suppList();
   } else if (fSeg === 'guide') {
     body = guideList('food');
   } else {
@@ -590,8 +592,21 @@ function vFood() {
       <div class="muted small">Порции подстройте под свою норму ${fmt(t.kcal)} ккал. При заболеваниях проконсультируйтесь с врачом.</div>`;
   }
   return `<section class="screen"><h1>Питание</h1>
-    <div class="seg"><button class="${fSeg === 'my' ? 'on' : ''}" data-act="fseg" data-v="my">Мой день</button><button class="${fSeg === 'menu' ? 'on' : ''}" data-act="fseg" data-v="menu">Меню</button><button class="${fSeg === 'guide' ? 'on' : ''}" data-act="fseg" data-v="guide">Гид</button></div>
+    <div class="seg"><button class="${fSeg === 'my' ? 'on' : ''}" data-act="fseg" data-v="my">Мой день</button><button class="${fSeg === 'menu' ? 'on' : ''}" data-act="fseg" data-v="menu">Меню</button><button class="${fSeg === 'supp' ? 'on' : ''}" data-act="fseg" data-v="supp">Добавки</button><button class="${fSeg === 'guide' ? 'on' : ''}" data-act="fseg" data-v="guide">Гид</button></div>
     ${body}</section>`;
+}
+function suppList() {
+  const SP = D.SUPPS; if (!SP) return '';
+  const item = (x) => `<details class="card supp"><summary><span class="se">${x.e}</span><span class="st"><b>${esc(x.name)}</b><span class="muted small">${esc(x.short)}</span></span><span class="chev">›</span></summary>
+    <div class="sb"><p>${esc(x.what)}</p>
+      ${x.types ? `<h4>Виды</h4><div class="stypes">${x.types.map(([n, t]) => `<div><b>${esc(n)}</b><span>${esc(t)}</span></div>`).join('')}</div>` : ''}
+      <h4>Для чего</h4><ul class="clean">${x.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
+      <h4>Как принимать</h4><p>${esc(x.how)}</p>
+      <div class="snote">⚠️ ${esc(x.note)}</div>
+      <div class="muted small">Источник: ${esc(x.src)}</div></div></details>`;
+  return `<div class="card sdisc"><b>Спортпит и БАДы — только проверенное</b><div class="muted small">${esc(SP.disclaimer)}</div></div>
+    ${SP.groups.map(g => `<div class="section-title sgh"><h2>${esc(g.title)}</h2><span class="tag ${g.id === 'a' || g.id === 'food' ? 'a' : g.id === 'd' ? 'd' : ''}">${esc(g.tag)}</span></div><div class="muted small" style="margin:-4px 2px 10px">${esc(g.note)}</div>
+      <div class="slist">${g.items.map(item).join('')}</div>`).join('')}`;
 }
 function foodCoach(t, e) {
   const h = new Date().getHours(), now = COACH.mealNow(h), M = COACH.meals(t), cur = M.find(m => m.n === now);

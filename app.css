@@ -288,3 +288,22 @@ textarea.input{min-height:120px;font-family:ui-monospace,monospace;font-size:13p
 .dstrip span b{font-size:11px;opacity:.7}
 .dstrip span.on{background:linear-gradient(180deg,#ff4d2e,#ff7a2e);color:#fff}
 .dstrip span.big{outline:2px solid #f5b301}
+/* добавки */
+.sdisc{display:grid;gap:6px;border:1px solid var(--line)}
+.sgh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+.tag.d{background:#3a1414;color:#ff8a7a}
+.slist{display:grid;gap:10px;margin-bottom:8px}
+.supp{padding:0;overflow:hidden}
+.supp summary{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;list-style:none;min-height:56px}
+.supp summary::-webkit-details-marker{display:none}
+.supp .se{font-size:26px;width:36px;text-align:center;flex:none}
+.supp .st{flex:1;display:grid;gap:2px;min-width:0}
+.supp .chev{font-size:24px;color:var(--muted);transition:transform .2s}
+.supp[open] .chev{transform:rotate(90deg)}
+.supp .sb{padding:0 16px 16px;display:grid;gap:8px;font-size:15px;line-height:1.45}
+.supp h4{margin:6px 0 0;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.supp p{margin:0}
+.stypes{display:grid;gap:8px}
+.stypes div{display:grid;gap:2px;padding:10px 12px;border-radius:12px;background:var(--surface2)}
+.stypes span{font-size:14px;color:var(--muted)}
+.snote{padding:10px 12px;border-radius:12px;background:rgba(245,179,1,.12);font-size:14px}
